@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block titulek %}Účastníci — {{ akce.nazev }}{% endblock %}
+{% block telo_trida %}{% if akce_uzavrena %}jen-cteni{% endif %}{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/soubory.js') }}?v={{ verze('js/soubory.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/tabulky.js') }}?v={{ verze('js/tabulky.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+{% with aktivni = 'ucastnici' %}{% include "akce_menu.html" %}{% endwith %}
+
+{% if muze_psat %}
+<article>
+  <h3>Naimportovat účastníky z h.skauting.cz</h3>
+  {# Dve poloviny vedle sebe: vlevo se soubor vybere, vpravo se import spusti.
+     Drive bylo tlacitko primo v plose pro pretahovani a vypadalo, jako by k ni
+     patrilo - clovek pak nevedel, jestli uz se neco deje, nebo ma jeste kliknout. #}
+  {# Import nahradi cely seznam, tak se pri existujicim seznamu clovek nejdriv zepta
+; u prazdneho seznamu neni co ztratit. #}
+  <form method="post" action="/akce/{{ akce.id }}/ucastnici/import"
+        enctype="multipart/form-data" class="import-ucastniku"
+        data-cekani="Importuji účastníky z Excelu…"
+        {% if akce.ucastnici %}data-potvrdit="Import nahradí {{ akce.ucastnici|length|mnozne('účastníka', 'účastníky', 'účastníků') }} — i ručně zapsané platby, doklady a docházku. Pokračovat?"{% endif %}>
+    {# `rucne` = pretazeny soubor se jen vlozi do policka, neodesle se sam.
+       Import prepisuje cely seznam, tak at je to na kliknuti. #}
+    <div class="pretahovani" data-pretahovani="rucne">
+      <span class="vyzva">Přetáhni sem soubor</span>
+      <small>nebo si ho vyber ze složky</small>
+      <input type="file" name="soubor" accept=".xlsx,.xlsm" required
+             aria-label="Vybrat Excel se seznamem účastníků">
+    </div>
+    <div class="import-spusteni">
+      <button type="submit" class="zlute velke-tlacitko">Naimportovat</button>
+      <small>Nahradí celý dosavadní seznam.</small>
+    </div>
+  </form>
+  <small>
+    Vyexportuj si seznam účastníků z h.skauting.cz jako Excel a přetáhni ho sem (nebo vyber
+    ze složky). Sloupce se hledají podle názvů v hlavičce, ne podle pořadí, takže drobná změna
+    exportu import nerozbije. <strong>Import nahradí stávající seznam</strong>, aby se děti při
+    opakovaném nahrání nezdvojily.
+  </small>
+</article>
+{% endif %}
+
+{% if akce.ucastnici %}
+  <h2>Seznam ({{ akce.ucastnici|length }})</h2>
+
+  {# Nazvy sloupcu pro popisky poli: cteci obrazovka u pole v tabulce
+     jinak nerekne, ktery sloupec to je. #}
+  {% set STITKY = {'jmeno': 'Jméno', 'prijmeni': 'Příjmení', 'prezdivka': 'Přezdívka',
+                   'ulice': 'Ulice', 'mesto': 'Město', 'psc': 'PSČ',
+                   'osobodny': 'Osobodny', 'detodny': 'Děťodny',
+                   'hotove': 'Hotově', 'prevodem': 'Převodem', 'vouchery': 'Vouchery'} %}
+  <form method="post" action="/akce/{{ akce.id }}/ucastnici/ulozit" data-prubezne>
+    <div class="siroka-tabulka">
+      <table class="husta">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Jméno</th><th>Příjmení</th><th>Přezdívka</th>
+            <th>Ulice</th><th>Město</th><th>PSČ</th>
+            <th>Datum narození</th><th>Jednotka</th>
+            <th class="cislo">Osobodny</th><th class="cislo">Děťodny</th>
+            <th class="cislo">Hotově</th><th>Doklad</th>
+            <th class="cislo">Převodem</th><th>Doklad</th>
+            <th class="cislo">Vouchery</th><th>Doklad</th>
+            <th class="cislo">Vratka</th><th>Doklad</th>
+            <th class="cislo">Celkem</th>
+            <th></th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in akce.ucastnici %}
+            {# Jmeno radku pro ctecku obrazovky; bez jmena aspon poradi. #}
+            {% set pop = ((u.jmeno or '') ~ ' ' ~ (u.prijmeni or ''))|trim or ('účastník č. ' ~ loop.index) %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              {% for pole, hodnota in [
+                   ('jmeno', u.jmeno), ('prijmeni', u.prijmeni), ('prezdivka', u.prezdivka),
+                   ('ulice', u.ulice), ('mesto', u.mesto), ('psc', u.psc)] %}
+                <td>
+                  <span class="hodnota">{{ hodnota or '' }}</span>
+                  <input class="uprava" type="text" name="{{ pole }}_{{ u.id }}"
+                         value="{{ hodnota or '' }}"
+                         aria-label="{{ STITKY[pole] }} — {{ pop }}" {{ pole_zamcena }}>
+                </td>
+              {% endfor %}
+              <td>
+                <span class="hodnota">{{ u.datum_narozeni|datum }}</span>
+                <input class="uprava" type="date" name="datum_narozeni_{{ u.id }}"
+                       aria-label="Datum narození — {{ pop }}"
+                       value="{{ u.datum_narozeni.isoformat() if u.datum_narozeni else '' }}" {{ pole_zamcena }}>
+              </td>
+              <td>
+                <span class="hodnota">{{ u.jednotka or '' }}</span>
+                <input class="uprava" type="text" name="jednotka_{{ u.id }}"
+                       aria-label="Jednotka — {{ pop }}"
+                       value="{{ u.jednotka or '' }}" {{ pole_zamcena }}>
+              </td>
+              {# Prazdne pole znamena "spocitej z dochazky" - spoctene cislo se
+                 ukazuje tlumene, aby slo poznat od rucne vepsaneho. #}
+              {% for pole, rucni, vysledne in [
+                   ('osobodny', u.osobodny, u.osobodny_vysledne),
+                   ('detodny', u.detodny, u.detodny_vysledne)] %}
+                <td class="cislo">
+                  <span class="hodnota {% if rucni is none %}spoctene{% endif %}"
+                        title="{% if rucni is none %}Spočítáno z docházky{% else %}Ruční číslo{% endif %}">{{ vysledne }}</span>
+                  <input class="uprava cislo" type="text" name="{{ pole }}_{{ u.id }}"
+                         aria-label="{{ STITKY[pole] }} — {{ pop }}"
+                         placeholder="{{ vysledne }}"
+                         value="{{ rucni if rucni is not none else '' }}" {{ pole_zamcena }}>
+                </td>
+              {% endfor %}
+              {% for pole, castka in [
+                   ('hotove', u.hotove), ('prevodem', u.prevodem), ('vouchery', u.vouchery)] %}
+                <td class="cislo">
+                  <span class="hodnota">{{ castka|koruny if castka is not none else '' }}</span>
+                  <input class="uprava cislo" type="text" name="{{ pole }}_{{ u.id }}"
+                         aria-label="{{ STITKY[pole] }} — {{ pop }}"
+                         value="{{ castka if castka is not none else '' }}" {{ pole_zamcena }}>
+                </td>
+                {% set doklad = u[pole ~ '_doklad'] %}
+                <td>
+                  <span class="hodnota">{{ doklad or '' }}</span>
+                  <input class="uprava" type="text" name="{{ pole }}_doklad_{{ u.id }}"
+                         aria-label="{{ STITKY[pole] }}, doklad — {{ pop }}"
+                         value="{{ doklad or '' }}" {{ pole_zamcena }}>
+                </td>
+              {% endfor %}
+              {# Vratka se na rozdil od predchozich tri tady needituje - castka
+                 se zadava jen v pokladni knize, ať se nemůže rozejít. Doklad
+                 (napr. cislo VPD) uz je jen poznamka, tu dopsat jde. #}
+              <td class="cislo" title="Zadává se v pokladní knize">
+                <span class="hodnota">{{ u.vratka|koruny if u.vratka is not none else '' }}</span>
+              </td>
+              <td>
+                <span class="hodnota">{{ u.vratka_doklad or '' }}</span>
+                <input class="uprava" type="text" name="vratka_doklad_{{ u.id }}"
+                       aria-label="Vratka, doklad — {{ pop }}"
+                       value="{{ u.vratka_doklad or '' }}" {{ pole_zamcena }}>
+              </td>
+              <td class="cislo"><strong>{{ u.zaplaceno|koruny }}</strong></td>
+              <td>
+                {% if not akce_uzavrena %}
+                <button type="button" class="secondary drobne" data-upravit
+                        aria-pressed="false" title="Upravit řádek"
+                        data-radek="{{ pop }}" aria-label="Upravit řádek {{ pop }}"
+                        data-ikona="✎" data-ikona-hotovo="✓">✎</button>
+                {% endif %}
+              </td>
+              <td>
+                {% if not akce_uzavrena %}
+                <button type="submit" form="smazat_ucastnika_{{ u.id }}"
+                        class="kontrast-chyba drobne" title="Smazat účastníka"
+                        aria-label="Smazat účastníka {{ pop }}">×</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <h2>Docházka</h2>
+    {% if akce.ma_termin %}
+      {# Vychozi stav je "vsichni byli vsechny dny" - odklikava se jen to, kdo kdy
+         chybel. Neodeslane zaskrtavatko routa cte jako nepritomnost. #}
+      {% set ZKRATKY = ['po', 'út', 'st', 'čt', 'pá', 'so', 'ne'] %}
+      <div class="siroka-tabulka">
+        <table class="husta dochazka">
+          <thead>
+            <tr>
+              <th>#</th><th>Jméno</th>
+              {% for den in akce.dny %}
+                <th class="stred{% if den.weekday() >= 5 %} vikend{% endif %}">
+                  <span class="den-zkratka">{{ ZKRATKY[den.weekday()] }}</span>
+                  <span class="den-cislo">{{ den.day }}. {{ den.month }}.</span>
+                </th>
+              {% endfor %}
+              <th class="cislo">Dnů</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in akce.ucastnici %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ u.jmeno or '' }} {{ u.prijmeni or '' }}</td>
+                {% for den in akce.dny %}
+                  <td class="stred{% if den.weekday() >= 5 %} vikend{% endif %}">
+                    <label class="bunka">
+                      <input type="checkbox" name="den_{{ u.id }}_{{ den.isoformat() }}"
+                             title="{{ u.jmeno }} {{ u.prijmeni }} — {{ den|datum }}"
+                             aria-label="{{ ((u.jmeno or '') ~ ' ' ~ (u.prijmeni or ''))|trim }} — {{ den|datum }}"
+                             {% if u.byl_pritomen(den) %}checked{% endif %} {{ pole_zamcena }}>
+                    </label>
+                  </td>
+                {% endfor %}
+                <td class="cislo">{{ u.osobodny_spoctene }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <small>
+        Zaškrtnuto = byl tu. Všichni začínají zaškrtnutí, takže odklikáváš jen to, kdo kdy chyběl.
+        Z mřížky se počítají osobodny; děťodny z nich dostane každý, komu k prvnímu dni akce
+        ještě nebylo patnáct.
+      </small>
+    {% else %}
+      <article>
+        <p>
+          Docházka potřebuje vědět, které dny akce trvala. Vyplň termín
+          v <a href="/akce/{{ akce.id }}">nastavení akce</a> a mřížka se sestaví sama.
+        </p>
+      </article>
+    {% endif %}
+
+    {% if not akce_uzavrena %}<button type="submit" data-bez-js>Uložit změny</button>{% endif %}
+  </form>
+
+  {% if not akce_uzavrena %}
+  {% for u in akce.ucastnici %}
+    <form method="post" action="/ucastnik/{{ u.id }}/smazat" id="smazat_ucastnika_{{ u.id }}"
+          data-potvrdit="Smazat účastníka „{{ ((u.jmeno or '') ~ ' ' ~ (u.prijmeni or ''))|trim }}“ i s platbami a docházkou? Vrátit to nejde."></form>
+  {% endfor %}
+  {% endif %}
+
+  {% if not akce_uzavrena %}
+  <p><small>
+    Tužtičkou u řádku ho přepneš do úprav. Změny se ukládají samy.
+    <strong>Osobodny a děťodny se počítají z docházky</strong> — tlumené číslo je spočítané.
+    Když do pole napíšeš vlastní číslo, platí tvoje; vymazáním se vrátí k automatu.
+  </small></p>
+  {% endif %}
+
+  {% if not akce_uzavrena %}
+  <details>
+    <summary>Smazat celý seznam</summary>
+    <article>
+      <form method="post" action="/akce/{{ akce.id }}/ucastnici/smazat"
+            data-potvrdit="Smazat všech {{ akce.ucastnici|length }} účastníků i s docházkou a platbami? Vrátit to nejde.">
+        <button type="submit" class="kontrast-chyba">Smazat všechny účastníky</button>
+      </form>
+    </article>
+  </details>
+  {% endif %}
+
+  <article>
+    <small>
+      Tahle data zůstávají jen na serveru. Nikdy se neposílají do AI a nikdy nekončí v gitu —
+      jsou to adresy a data narození dětí.
+    </small>
+  </article>
+{% else %}
+  <p>Zatím tu nejsou žádní účastníci.</p>
+{% endif %}
+{% endblock %}

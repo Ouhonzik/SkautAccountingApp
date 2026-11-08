@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block titulek %}Cestovní příkaz — {{ cestak.ucel_cesty }}{% endblock %}
+
+{% block styly %}
+  <link rel="stylesheet" href="{{ url_for('static', path='tisk.css') }}?v={{ verze('tisk.css') }}">
+{% endblock %}
+
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/prohlizec_dokladu.js') }}?v={{ verze('js/prohlizec_dokladu.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+{# Vsechno, co neni papir, se pri tisku schova - proto ta obalka. #}
+<div class="netisknout">
+  <div class="kniha-zahlavi">
+    <h2>Cestovní příkaz</h2>
+    <p class="tlacitka">
+      <a href="/cestak/{{ cestak.id }}" role="button" class="outline drobne">Zpět na cesťák</a>
+      <button type="button" class="zlute" data-tisk>Vytisknout</button>
+    </p>
+  </div>
+  <small>
+    Tiskne se z prohlížeče (totéž jako Ctrl+P) — celý příkaz na jednu A4, stejně jako
+    papír z h.skauting.cz. V dialogu tisku nech měřítko na 100 %, okraje na nule a vypni
+    záhlaví a zápatí prohlížeče, aby se papír nezmenšil.
+    Kolonky, které se vyplňují perem (povolená záloha, účtovací předpis, podpisy),
+    zůstávají schválně prázdné.
+  </small>
+</div>
+
+<div class="doklady-plocha">
+<article class="doklad cestak">
+  {# Znacky na derovani - stejne jako na PPD/VPD, papir se zaklada do sanonu. #}
+  <div class="doklad-vazba" aria-hidden="true">
+    <span class="doklad-dira prvni"></span>
+    <span class="doklad-dira druha"></span>
+  </div>
+
+  <header class="doklad-hlavicka">
+    <img src="{{ url_for('static', path='kormorani-badge-300.png') }}?v={{ verze('kormorani-badge-300.png') }}" alt="">
+    <div class="doklad-stredisko">
+      <strong>{{ stredisko }}</strong>
+      <span>{{ sidlo }}</span>
+      <span>IČO: {{ ico }} · DIČ: {{ dic }}</span>
+    </div>
+    <div class="doklad-cislo">
+      <span class="popisek">Jednotka</span>
+      <strong>{{ cestak.jednotka or '' }}</strong>
+    </div>
+  </header>
+
+  <h2 class="doklad-nazev">Cestovní příkaz</h2>
+
+  <div class="doklad-dvojice">
+    <div class="doklad-pole siroke">
+      <span class="popisek">1. Příjmení, jméno</span>
+      <span class="hodnota">{{ cestak.cestujici.jmeno if cestak.cestujici else '' }}</span>
+    </div>
+    <div class="doklad-pole">
+      <span class="popisek">Kontakt</span>
+      <span class="hodnota">{{ cestak.kontakt or '' }}</span>
+    </div>
+  </div>
+  <div class="doklad-pole">
+    <span class="popisek">2. Bydliště</span>
+    <span class="hodnota">{{ cestak.adresa or '' }}</span>
+  </div>
+
+  <table class="doklad-rozpis cestak-cesta">
+    <thead>
+      <tr>
+        <th>Počátek cesty</th><th>Účel cesty</th><th>Místo</th><th>Konec cesty</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          {{ zacatek_misto or '' }}
+          {% if zacatek_datum %}<span class="cestak-datum">{{ zacatek_datum|datum }}</span>{% endif %}
+        </td>
+        <td>{{ cestak.ucel_cesty }}</td>
+        <td>{{ cestak.misto or '' }}</td>
+        <td>
+          {{ konec_misto or '' }}
+          {% if konec_datum %}<span class="cestak-datum">{{ konec_datum|datum }}</span>{% endif %}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="doklad-pole">
+    <span class="popisek">3. Spolucestující</span>
+    <span class="hodnota">{{ cestak.spolucestujici or '' }}</span>
+  </div>
+  <div class="doklad-pole">
+    <span class="popisek">4. Určený dopr. prostředek</span>
+    <span class="hodnota">{{ prostredek }}</span>
+  </div>
+  {# 5. a 6. se vyplnuji pred cestou perem - appka odhad vydaju ani povolenou
+     zalohu neeviduje, tak se nechavaji prazdne. #}
+  <div class="doklad-dvojice">
+    <div class="doklad-pole">
+      <span class="popisek">5. Předpokládaná část výdajů Kč</span>
+      <span class="hodnota"></span>
+    </div>
+    <div class="doklad-pole">
+      <span class="popisek">6. Povolená záloha Kč</span>
+      <span class="hodnota"></span>
+    </div>
+  </div>
+
+  <div class="doklad-podpisy">
+    <div class="doklad-podpis">
+      <span class="misto"></span>
+      <span class="popisek">Podpis pokladníka</span>
+      <span class="jmeno">{{ akce.pokladnik or '' }}</span>
+    </div>
+    <div class="doklad-podpis">
+      <span class="misto"></span>
+      <span class="popisek">Datum a podpis pracovníka oprávněného k povolení cesty</span>
+      <span class="jmeno"></span>
+    </div>
+  </div>
+
+  <h3 class="cestak-podnadpis">Vyúčtování pracovní cesty</h3>
+
+  <div class="doklad-dvojice">
+    <div class="doklad-pole siroke">
+      <span class="popisek">7. Zpráva o výsledku pracovní cesty byla podána dne</span>
+      <span class="hodnota"></span>
+    </div>
+    <div class="doklad-pole">
+      <span class="popisek">Se způsobem provedení souhlasí</span>
+      <span class="hodnota"></span>
+    </div>
+  </div>
+
+  <div class="doklad-dvojice">
+    <div class="doklad-pole">
+      <span class="popisek">8. Výdajový – příjmový doklad číslo</span>
+      <span class="hodnota">{{ cislo_dokladu or '' }}</span>
+    </div>
+    <div class="doklad-pole">
+      <span class="popisek">Účtovaná náhrada přezkoušena a upravena na Kč</span>
+      <span class="hodnota"></span>
+    </div>
+    <div class="doklad-pole uzke">
+      <span class="popisek">Vyplacená záloha Kč</span>
+      <span class="hodnota"></span>
+    </div>
+    <div class="doklad-pole uzke">
+      <span class="popisek">Doplatek – přeplatek Kč</span>
+      <span class="hodnota"></span>
+    </div>
+  </div>
+
+  <div class="doklad-pole">
+    <span class="popisek">Slovy</span>
+    <span class="hodnota">{{ slovy }}</span>
+  </div>
+
+  <table class="doklad-rozpis cestak-predpis">
+    <thead>
+      <tr>
+        <th>Má dáti</th><th>Dal</th><th>Částka</th><th>Středisko</th><th>Zakázka</th>
+      </tr>
+    </thead>
+    <tbody>
+      {# Ucetni zapis dopisuje hospodar perem - tri prazdne radky jako ve vzoru. #}
+      {% for _ in range(3) %}
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="doklad-pole">
+    <span class="popisek">Poznámka o zaúčtování</span>
+    <span class="hodnota"></span>
+  </div>
+
+  <div class="doklad-podpisy">
+    <div class="doklad-podpis">
+      <span class="misto"></span><span class="popisek">Datum a podpis upravitele</span>
+    </div>
+    <div class="doklad-podpis">
+      <span class="misto"></span><span class="popisek">Datum a podpis příjemce</span>
+      <span class="jmeno">{{ cestak.cestujici.jmeno if cestak.cestujici else '' }}</span>
+    </div>
+    <div class="doklad-podpis">
+      <span class="misto"></span><span class="popisek">Datum a podpis pokladníka</span>
+      <span class="jmeno">{{ akce.pokladnik or '' }}</span>
+    </div>
+    <div class="doklad-podpis">
+      <span class="misto"></span><span class="popisek">Schválil – datum a podpis</span>
+    </div>
+  </div>
+
+  <h3 class="cestak-podnadpis">Vyúčtování pracovní cesty — rozpis jízd</h3>
+
+  <p class="cestak-sazby">
+    <span>Cena paliva: <strong>{{ cestak.cena_za_litr|koruny if cestak.cena_za_litr else '—' }}/l</strong></span>
+    <span>Spotřeba dle t.p.: <strong>{% if cestak.spotreba %}{{ cestak.spotreba|desetinne }} l/100 km{% else %}—{% endif %}</strong></span>
+    <span>Cena PHM 1 km: <strong>{{ cena_phm|koruny }}</strong></span>
+    <span>Opotřebení: <strong>{{ cestak.opotrebeni|koruny if cestak.opotrebeni else '—' }}/km</strong></span>
+    <span class="cestak-sazba-celkem">Sazba náhrady: <strong>{{ sazba|koruny }}/km</strong></span>
+  </p>
+
+  <table class="doklad-rozpis cestak-jizdy">
+    <thead>
+      <tr>
+        <th>Datum</th><th>Z</th><th>Do</th><th>Prostředek</th>
+        <th class="cislo">Sazba náhr.</th><th class="cislo">Počet km</th>
+        <th class="cislo">Cena</th><th>Upraveno</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for jizda, cena in radky %}
+        <tr>
+          <td>{{ jizda.datum|datum if jizda.datum else '' }}</td>
+          <td>{{ jizda.odkud or '' }}</td>
+          <td>{{ jizda.kam or '' }}</td>
+          <td>{{ jizda.nazev_prostredku }}</td>
+          <td class="cislo">{{ sazba|koruny if jizda.je_na_km else '' }}</td>
+          <td class="cislo">{{ jizda.km|km if jizda.je_na_km and jizda.km is not none else '' }}</td>
+          <td class="cislo">{{ cena|koruny }}</td>
+          {# Sloupec "Upraveno" opravuje kontrolor perem - zustava prazdny. #}
+          <td></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="cestak-zaver">
+    <p class="cestak-prilohy">
+      K vyúčtování připojuji <strong>{{ pocet_priloh|mnozne('doklad', 'doklady', 'dokladů') }}</strong>.
+      {% if cestak.palivova_uctenka %}
+        <span class="cestak-priloha-nazev">{{ cestak.palivova_uctenka.nazev or cestak.palivova_uctenka.puvodni_nazev }}</span>
+      {% endif %}
+    </p>
+    <table class="cestak-soucty">
+      <tbody>
+        <tr>
+          <th>Celkem po zaokrouhlení dolů</th>
+          <td class="cislo"><strong>{{ celkem|koruny }}</strong></td>
+        </tr>
+        <tr><th>Záloha</th><td class="cislo"></td></tr>
+        <tr><th>Doplatek – přeplatek</th><td class="cislo"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="cestak-prohlaseni">
+    Prohlašuji, že jsem všechny údaje uvedl úplně a správně:
+    <span class="cestak-linka"></span>
+    <span class="popisek">Datum a podpis</span>
+  </p>
+
+  <footer class="doklad-paticka">
+    {{ akce.nazev }}{% if konec_datum %} · {{ konec_datum.year }}{% endif %}
+    {%- if pocet_km %} · ujeto {{ pocet_km|km }} km{% endif %}
+  </footer>
+</article>
+</div>
+{% include "doklad_prohlizec.html" %}
+{% endblock %}

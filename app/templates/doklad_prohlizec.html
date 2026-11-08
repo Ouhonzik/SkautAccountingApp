@@ -1,0 +1,21 @@
+{# Prohlizec dokladu: jen telefon. Doklad na strance je tam zmenseny,
+   tlacitko "Priblizit doklad" (js/prohlizec_dokladu.js) ho tady ukaze v puvodni
+   velikosti A4 pres celou obrazovku. Obsah dokladu sem skript vlozi jako klon
+   hotoveho DOM, takze tu zadna data nejsou. Stoji MIMO `.doklady-plocha`, jinak
+   by posledni doklad prestal byt posledni a tisk by pridal prazdnou stranu. #}
+<dialog class="prohlizec" aria-label="Doklad přes celou obrazovku" aria-modal="true" tabindex="-1">
+  <div class="prohlizec-plocha" tabindex="0" role="group"
+       aria-label="Doklad. Přibližuje se tlačítky, dvěma prsty nebo dvojitým klepnutím.">
+    <div class="prohlizec-papir"></div>
+  </div>
+  <div class="prohlizec-zoom" role="toolbar" aria-label="Přiblížení dokladu">
+    <button type="button" class="drobne outline prohlizec-oddalit"
+            title="Oddálit (−)" aria-label="Oddálit doklad">−</button>
+    <button type="button" class="drobne outline prohlizec-puvodni"
+            title="Původní velikost (0)" aria-label="Původní velikost dokladu">100 %</button>
+    <button type="button" class="drobne outline prohlizec-priblizit"
+            title="Přiblížit (+)" aria-label="Přiblížit doklad">+</button>
+  </div>
+  <button type="button" class="ikona prohlizec-zavrit"
+          title="Zavřít (Esc)" aria-label="Zavřít prohlížeč dokladu">×</button>
+</dialog>

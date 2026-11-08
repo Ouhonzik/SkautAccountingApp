@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block titulek %}Log činnosti{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/log.js') }}?v={{ verze('js/log.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+<h1>Log činnosti</h1>
+<p>Kdo a kdy v aplikaci co změnil. Prohlížení stránek se nezaznamenává — jen skutečné změny dat a přihlašování.</p>
+
+<article class="log-filtr-karta">
+  {# Na telefonu je filtr schovaný v rozbalovací nabídce „Filtr“ (zavřená, dokud se
+     nefiltruje), na počítači je jen formulář jako dřív: <details> je tam napevno
+     otevřený (atribut `open`) a tlačítko Filtr schované. Bez JavaScriptu je filtr
+     na telefonu otevřený taky. Zavírá ho js/log.js. #}
+  <details class="log-filtr" open{% if pocet_filtru %} data-aktivni{% endif %}>
+  <summary>Filtr{% if pocet_filtru %} <small class="log-filtr-pocet">({{ pocet_filtru|mnozne('aktivní', 'aktivní', 'aktivních') }})</small>{% endif %}</summary>
+  <form method="get" action="/log" class="radek">
+    <label style="flex:1">Uživatel
+      <select name="uzivatel">
+        <option value="">— všichni —</option>
+        {% for u in uzivatele %}
+          <option value="{{ u.id }}" {% if vybrany_uzivatel == u.id %}selected{% endif %}>{{ u.jmeno }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label style="flex:1">Akce
+      <select name="akce">
+        <option value="">— všechny —</option>
+        {% for aid, nazev in akce_seznam %}
+          <option value="{{ aid }}" {% if vybrana_akce == aid %}selected{% endif %}>{{ nazev }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label style="flex:1">Typ
+      <select name="typ">
+        <option value="vse" {% if vybrany_typ == 'vse' %}selected{% endif %}>vše</option>
+        <option value="prihlaseni" {% if vybrany_typ == 'prihlaseni' %}selected{% endif %}>přihlašování</option>
+        <option value="zmeny" {% if vybrany_typ == 'zmeny' %}selected{% endif %}>změny</option>
+        <option value="smazani" {% if vybrany_typ == 'smazani' %}selected{% endif %}>smazání</option>
+        <option value="ucty" {% if vybrany_typ == 'ucty' %}selected{% endif %}>účty (pozvánky, hesla)</option>
+      </select>
+    </label>
+    <label style="flex:1">Období
+      <select name="obdobi">
+        {% for klic, popisek in obdobi_volby.items() %}
+          <option value="{{ klic }}" {% if vybrane_obdobi == klic %}selected{% endif %}>{{ popisek }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="secondary">Filtrovat</button>
+  </form>
+  </details>
+</article>
+
+<div class="dlazdice log-dlazdice">
+  <article>
+    <h3>Přihlášení</h3>
+    <p class="velke">{{ souhrn.prihlaseni }}</p>
+    {% if souhrn.neuspesne %}<small class="zaporne">{{ souhrn.neuspesne|mnozne('neúspěšné', 'neúspěšná', 'neúspěšných') }}</small>{% endif %}
+  </article>
+  <article>
+    <h3>Změny</h3>
+    <p class="velke">{{ souhrn.zmeny }}</p>
+  </article>
+  <article>
+    <h3>Smazání</h3>
+    <p class="velke {{ 'zaporne' if souhrn.smazani else '' }}">{{ souhrn.smazani }}</p>
+  </article>
+  <article>
+    <h3>Aktivní lidé</h3>
+    <p class="velke">{{ souhrn.aktivni_lide }}</p>
+  </article>
+  <article>
+    <h3>Čtení AI</h3>
+    <p class="velke">{{ souhrn.cteni_ai }}</p>
+    <small>
+      {{ souhrn.cteni_ai_kc|koruny }}{% if souhrn.cteni_ai_nezname %} + neznámo{% endif %}
+    </small>
+  </article>
+</div>
+
+{% if graf %}
+<article>
+  <h3>Aktivita po dnech</h3>
+  <ol class="aktivita-sloupce">
+    {% for d in graf %}
+      <li title="{{ d.den|den_slovy }}: {{ d.zmeny }} změn, {{ d.smazani }} smazání">
+        <span class="sloupec">
+          <span class="cast-smazani" style="--smazani: {{ d.smazani }}; --max: {{ graf_max }}"></span>
+          <span class="cast-zmeny" style="--zmeny: {{ d.zmeny }}; --max: {{ graf_max }}"></span>
+        </span>
+        <small>{{ d.den.day }}.<span class="jen-pro-cteni"> — {{ d.zmeny }} změn, {{ d.smazani }} smazání</span></small>
+      </li>
+    {% endfor %}
+  </ol>
+  <small>Modře změny, červeně šrafovaně smazání. Přesný počet se ukáže najetím myší na sloupec.</small>
+</article>
+{% endif %}
+
+{% if po_dnech %}
+  {% for den in po_dnech %}
+    <article class="log-den">
+      <h3>{{ den.den|den_slovy }} <small>{{ den.zaznamy|length|mnozne('záznam', 'záznamy', 'záznamů') }}</small></h3>
+      <ol class="log-polozky">
+        {% for z in den.zaznamy %}
+          <li class="log-polozka typ-{{ z.typ_cinnosti }}">
+            <span class="log-avatar barva-{{ (z.uzivatel_id or 0) % 8 }}" title="{{ z.uzivatel_jmeno }}">{{ z.uzivatel_jmeno|inicialy }}</span>
+            <span class="log-cas">
+              {{ z.od|cas }}{% if z.do != z.od %}–{{ z.do|cas }}{% endif %}
+            </span>
+            <span class="log-obsah">
+              {% if z.typ_cinnosti == 'pridani' %}<span class="stitek zvyrazneny">přidáno</span>
+              {%- elif z.typ_cinnosti == 'uprava' %}<span class="stitek">upraveno</span>
+              {%- elif z.typ_cinnosti == 'smazani' %}<span class="stitek chyba-stitek">smazáno</span>
+              {%- elif z.typ_cinnosti == 'prihlaseni_neuspesne' %}<span class="stitek chyba-stitek">neúspěšné přihlášení</span>
+              {%- elif z.typ_cinnosti == 'prihlaseni' %}<span class="stitek">přihlášení</span>
+              {%- elif z.typ_cinnosti == 'odhlaseni' %}<span class="stitek">odhlášení</span>
+              {%- elif z.typ_cinnosti == 'pozvanka' %}<span class="stitek">pozvánka</span>
+              {%- elif z.typ_cinnosti == 'registrace' %}<span class="stitek zvyrazneny">registrace</span>
+              {%- elif z.typ_cinnosti == 'reset_hesla_zadost' %}<span class="stitek">žádost o reset hesla</span>
+              {%- elif z.typ_cinnosti == 'reset_hesla' %}<span class="stitek">reset hesla</span>
+              {%- elif z.typ_cinnosti == 'email_omezen' %}<span class="stitek pozor">e-mail nad limitem</span>
+              {%- elif z.typ_cinnosti == 'stazeni' %}<span class="stitek">stažení</span>
+              {%- endif -%}
+              {#- Na telefonu je záznam na jeden řádek: štítek a zkrácený popis, u záznamů
+                  s akcí bez jména a odkazu (ty se ukážou po rozbalení, js/log.js). Na počítači
+                  je všechno vidět jako dřív. Text se nesmí členit jinak než dřív (jméno
+                  s pomlčkou, dvojtečka s popisem), jinak se na počítači posune o zlomek
+                  pixelu - proto jsou mezery uvnitř <span>ů a mezi značkami žádné nejsou. -#}
+              {% if z.akce_id -%}
+              <span class="log-kdo"> {{ z.uzivatel_jmeno }} — </span><span class="log-akce"><a href="/akce/{{ z.akce_id }}">{{ z.akce_nazev }}</a></span><span class="log-popis s-akci">: {{ z.popis }} </span>
+              {%- else %}<span class="log-popis"> {{ z.uzivatel_jmeno }} — {{ z.popis }} </span>{% endif -%}
+              {% if z.pocet > 1 %}<small class="log-pocet">({{ z.pocet }}×)</small>{% endif %}
+            </span>
+            <button type="button" class="log-rozbalit" aria-expanded="false" aria-label="Celý záznam z {{ z.od|cas }}"></button>
+          </li>
+        {% endfor %}
+      </ol>
+    </article>
+  {% endfor %}
+
+  {% if ma_dalsi_stranku %}
+    <p class="tlacitka">
+      <a role="button" class="secondary"
+         href="/log?uzivatel={{ vybrany_uzivatel or '' }}&akce={{ vybrana_akce or '' }}&typ={{ vybrany_typ }}&obdobi={{ vybrane_obdobi }}&strana_c={{ strana_c + 1 }}">
+        Starší
+      </a>
+    </p>
+  {% endif %}
+{% else %}
+  <p>V tomhle výběru zatím nic není.
+    {% if vybrane_obdobi != 'vse' %}
+      <a href="/log?uzivatel={{ vybrany_uzivatel or '' }}&akce={{ vybrana_akce or '' }}&typ={{ vybrany_typ }}&obdobi=vse">Zobrazit za celé období</a>
+    {% endif %}
+  </p>
+{% endif %}
+{% endblock %}

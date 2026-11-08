@@ -1,0 +1,59 @@
+[project]
+name = "uctovani-akci"
+version = "0.1.0"
+description = "Vyuctovani skautskych akci - cteni uctenek, pokladni kniha, export pro ucetniho"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.20",
+    "itsdangerous>=2.2",
+    "pydantic-settings>=2.7",
+    "sqlalchemy>=2.0",
+    "alembic>=1.14",
+    "google-genai>=1.0",
+    "pillow>=11.0",
+    "pillow-heif>=0.21",
+    "openpyxl>=3.1",
+    "bcrypt>=4.2",
+    "pypdfium2>=5.13.0",
+    "tzdata>=2026.3",
+    "httpx>=0.28.1",
+]
+
+[project.scripts]
+app = "app.main:run"
+spravce = "app.prikazy:vytvor_spravce"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "httpx>=0.28",
+    "ruff>=0.16.9",
+    "pyright>=1.1.414",
+    "pytest-playwright>=0.9.0",
+]
+
+[tool.uv]
+# Verze nástroje uv musí být lokálně i na serveru stejná: jiná verze může zapsat
+# uv.lock v jiném formátu nebo se chovat jinak. Zvedat vědomě.
+required-version = ">=0.10.7,<0.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Skrývá se jediné varování, a to přesně: Starlette při importu TestClientu hlásí, že
+# s `httpx` je testovací klient zastaralý a má být `httpx2`. Vzniká uvnitř cizího balíčku
+# (starlette.testclient), takže z projektu opravit nejde. `httpx2` záměrně nepřidáváme
+# a až se testy na `httpx2` přejdou, tenhle řádek smaž.
+# Ostatní varování (třeba z google.genai) zůstávají vidět, proto žádné plošné "ignore".
+filterwarnings = [
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

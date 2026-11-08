@@ -1,0 +1,10 @@
+Ahoj {{ jmeno }},
+
+{{ pozval }} tě pozval(a) do aplikace Účtování akcí. Klikni na odkaz níže
+a nastav si heslo:
+
+{{ odkaz }}
+
+Odkaz platí do {{ platnost }}.
+
+Pokud jsi o to nežádal(a), e-mail ignoruj.

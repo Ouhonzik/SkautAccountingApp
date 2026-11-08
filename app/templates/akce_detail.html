@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block titulek %}{{ akce.nazev }}{% endblock %}
+
+{% block obsah %}
+{% with aktivni = 'prehled' %}{% include "akce_menu.html" %}{% endwith %}
+
+{# Rozcestnik akce. Kazda dlazdice je jedna sekce - cela je odkaz,
+   takze se do ni klika kdekoli, ne jen na tlacitko. #}
+<div class="dlazdice">
+  <a class="dlazdice-karta" href="/akce/{{ akce.id }}/skeny">
+    <h3>Účtenky</h3>
+    <p class="velke">{{ akce.skeny|length }}</p>
+    <p class="dlazdice-stav">
+      {% if pocet_neprectenych %}
+        <mark>{{ pocet_neprectenych|mnozne('nepřečtená', 'nepřečtené', 'nepřečtených') }}</mark><br>
+      {% endif %}
+      {% if pocet_nezkontrolovanych %}
+        {# Cervene, at je na rozcestniku videt, ze uctenky jeste cekaji na kontrolu. #}
+        <span class="stitek chyba-stitek">
+          {{ pocet_nezkontrolovanych|mnozne('nezkontrolovaná', 'nezkontrolované', 'nezkontrolovaných') }}
+        </span>
+      {% elif akce.skeny %}
+        <span class="stitek ok">Vše zkontrolováno</span>
+      {% else %}
+        Zatím žádné účtenky
+      {% endif %}
+    </p>
+  </a>
+
+  <a class="dlazdice-karta" href="/akce/{{ akce.id }}/slozky">
+    <h3>Složky</h3>
+    <p class="velke">{{ akce.slozky|length }}</p>
+    <p class="dlazdice-stav">
+      {% if pocet_nezarazenych %}
+        <mark>{{ pocet_nezarazenych|mnozne('nezařazený sken', 'nezařazené skeny', 'nezařazených skenů') }}</mark>
+      {% elif akce.slozky %}
+        <span class="stitek ok">Všechno je zařazené</span>
+      {% else %}
+        Zatím žádné složky
+      {% endif %}
+    </p>
+  </a>
+
+  <a class="dlazdice-karta" href="/akce/{{ akce.id }}/prijmy">
+    <h3>Příjmy</h3>
+    <p class="velke">{{ akce.soucet_prijmu|koruny }}</p>
+    <p class="dlazdice-stav">
+      {% if akce.prijmy %}
+        {{ akce.prijmy|length|mnozne('položka', 'položky', 'položek') }} ·
+        výdaje {{ akce.soucet_vydaju|koruny }}
+      {% else %}
+        Zatím žádné příjmy
+      {% endif %}
+    </p>
+  </a>
+
+  <a class="dlazdice-karta" href="/akce/{{ akce.id }}/pokladni-kniha">
+    <h3>Pokladní kniha</h3>
+    <p class="velke {{ 'kladne' if konecny_zustatek >= 0 else 'zaporne' }}">{{ konecny_zustatek|koruny }}</p>
+    <p class="dlazdice-stav">
+      {% if pocet_neuplnych_v_knize %}
+        {# Bez data nebo mimo slozku - obojim stoji a pada cislovani dokladu. #}
+        <span class="stitek chyba-stitek">
+          {{ pocet_neuplnych_v_knize|mnozne('neúplný řádek', 'neúplné řádky', 'neúplných řádků') }}
+        </span>
+      {% elif pocet_radku_knihy %}
+        {{ pocet_radku_knihy|mnozne('řádek', 'řádky', 'řádků') }} · konečný zůstatek
+      {% else %}
+        Zatím prázdná
+      {% endif %}
+    </p>
+  </a>
+
+  <a class="dlazdice-karta" href="/akce/{{ akce.id }}/ucastnici">
+    <h3>Účastníci</h3>
+    <p class="velke">{{ akce.ucastnici|length }}</p>
+    <p class="dlazdice-stav">
+      {% if akce.ucastnici %}
+        <span class="stitek ok">Seznam naimportovaný</span>
+      {% else %}
+        Zatím nikdo — naimportuj z h.skauting.cz
+      {% endif %}
+    </p>
+  </a>
+
+  <a class="dlazdice-karta" href="/akce/{{ akce.id }}/cestaky">
+    <h3>Cesťáky</h3>
+    <p class="velke">{{ nahrady_cestaku|koruny }}</p>
+    <p class="dlazdice-stav">
+      {% if pocet_neuplnych_cestaku %}
+        {# Cestaku neco chybi (jizda, km, sazba, vozidlo) - je to rozdelana prace. #}
+        <span class="stitek pozor">
+          {{ pocet_neuplnych_cestaku|mnozne('neúplný cesťák', 'neúplné cesťáky', 'neúplných cesťáků') }}
+        </span>
+      {% elif akce.cestaky %}
+        {{ akce.cestaky|length|mnozne('příkaz', 'příkazy', 'příkazů') }} ·
+        <span class="stitek ok">Vyplněné</span>
+      {% else %}
+        Zatím žádný cesťák
+      {% endif %}
+    </p>
+  </a>
+
+  <a class="dlazdice-karta" href="/akce/{{ akce.id }}/obdarovani">
+    <h3>Obdarovaní</h3>
+    <p class="velke">{{ akce.obdarovani|length }}</p>
+    <p class="dlazdice-stav">
+      {% if pocet_bez_veci %}
+        {# Clovek, kteremu nikdo nic nedal, je v seznamu k nicemu - hospodar
+           se z nej nedozvi, co se rozdalo. #}
+        <span class="stitek pozor">
+          {{ pocet_bez_veci|mnozne('člověk bez věci', 'lidé bez věci', 'lidí bez věci') }}
+        </span>
+      {% elif akce.obdarovani %}
+        <span class="stitek ok">Všechno vyplněné</span>
+      {% else %}
+        Zatím nikdo nic nedostal
+      {% endif %}
+    </p>
+  </a>
+</div>
+
+<h2>Výstupy</h2>
+<article>
+  <p class="tlacitka">
+    <a href="/akce/{{ akce.id }}/export/excel" role="button">Excel pro hospodáře</a>
+    <a href="/akce/{{ akce.id }}/export/zip" role="button"
+       data-cekani="Připravuji ZIP — stahování začne samo, může to chvíli trvat.">ZIP se složkami</a>
+    <a href="/akce/{{ akce.id }}/export/pokladni-kniha" role="button">Pokladní kniha</a>
+    {% if akce.ucastnici %}
+      <a href="/akce/{{ akce.id }}/export/ucastnici" role="button">Seznam účastníků</a>
+    {% endif %}
+    {% if akce.obdarovani %}
+      <a href="/akce/{{ akce.id }}/export/obdarovani" role="button">Seznam obdarovaných</a>
+    {% endif %}
+    <a href="/akce/{{ akce.id }}/doklady" role="button">Tiskopisy PPD/VPD</a>
+    <a href="/akce/{{ akce.id }}/zaloha" role="button" class="outline"
+       data-cekani="Připravuji zálohu — stahování začne samo, může to chvíli trvat.">Stáhnout zálohu akce</a>
+  </p>
+  <small>
+    Tiskopisy jsou papíry na vytištění — na každý doklad jeden list A4, na který nalepíš
+    originální účtenky a podepíšeš ho. Seznam účastníků obsahuje osobodny, děťodny, poukázané
+    prostředky a mřížku denní účasti. Seznam obdarovaných je evidence rozdaných cen.
+    Excel a ZIP jsou to, co posíláš hospodáři. Záloha je navíc — obsahuje skeny, Excel
+    i <code>data.json</code>, ze kterého jde akci obnovit (viz Obnova ze zálohy), kdyby
+    selhal server.
+    <strong>Záloha obsahuje osobní údaje účastníků</strong> (jména, adresy, data
+    narození) a u cesťáků i bydliště a kontakt cestujícího — ukládej ji jen tam,
+    kam nemá přístup nikdo cizí.
+  </small>
+</article>
+
+{% if uzivatel.je_spravce %}
+<p class="tlacitka">
+  <a href="/log?akce={{ akce.id }}" role="button" class="outline drobne">Historie změn</a>
+</p>
+{% endif %}
+
+<h2>Nastavení akce</h2>
+<article class="nastaveni-akce">
+  <form method="post" action="/akce/{{ akce.id }}/upravit">
+    <div class="radek">
+      <label class="nast-nazev">Název
+        <input type="text" name="nazev" value="{{ stav_formulare.hodnota('nazev', akce.nazev) }}"
+               required{{ stav_formulare.atributy('nazev') }} {{ pole_zamcena }}>
+        {{ stav_formulare.napoveda('nazev') }}
+      </label>
+      <label class="nast-datum">Akce od
+        <input type="date" name="datum_od"
+               value="{{ stav_formulare.hodnota('datum_od', akce.datum_od.isoformat() if akce.datum_od else '') }}"{{ stav_formulare.atributy('datum_od') }} {{ pole_zamcena }}>
+        {{ stav_formulare.napoveda('datum_od') }}
+      </label>
+      <label class="nast-datum">Akce do
+        <input type="date" name="datum_do" data-nejmene-podle="datum_od"
+               value="{{ stav_formulare.hodnota('datum_do', akce.datum_do.isoformat() if akce.datum_do else '') }}"{{ stav_formulare.atributy('datum_do') }} {{ pole_zamcena }}>
+        {{ stav_formulare.napoveda('datum_do') }}
+      </label>
+      <label class="nast-datum">Datum vyúčtování
+        <input type="date" name="datum_vyuctovani"
+               value="{{ stav_formulare.hodnota('datum_vyuctovani', akce.datum_vyuctovani.isoformat() if akce.datum_vyuctovani else '') }}"{{ stav_formulare.atributy('datum_vyuctovani') }} {{ pole_zamcena }}>
+        {{ stav_formulare.napoveda('datum_vyuctovani') }}
+      </label>
+    </div>
+    <div class="radek nast-odstup-maly">
+      <label class="nast-prefix">Prefix čísel dokladů
+        <input type="text" name="prefix_dokladu" value="{{ stav_formulare.hodnota('prefix_dokladu', akce.prefix_dokladu or '') }}"
+               placeholder="např. TAB2026"{{ stav_formulare.atributy('prefix_dokladu') }} {{ pole_zamcena }}>
+        {{ stav_formulare.napoveda('prefix_dokladu') }}
+      </label>
+      <label class="nast-pokladnik">Pokladník akce
+        <select name="pokladnik"{{ stav_formulare.atributy('pokladnik') }} {{ pole_zamcena }}>
+          <option value="">—</option>
+          {% for c in lide %}
+            <option value="{{ c.id }}" {% if stav_formulare.hodnota('pokladnik', akce.pokladnik_id or '')|string == c.id|string %}selected{% endif %}>{{ c.jmeno }}</option>
+          {% endfor %}
+        </select>
+        {{ stav_formulare.napoveda('pokladnik') }}
+      </label>
+      {# Uzavřená akce: pole i „Uložit“ jsou zamčené, server zápis odmítá. #}
+      <button type="submit" {{ pole_zamcena }}>Uložit</button>
+    </div>
+  </form>
+  <small class="nast-napoveda">
+    <strong>Termín akce (od–do)</strong> je první a poslední den akce. Sestaví se z něj mřížka
+    docházky a hlídá se podle něj datum účtenek. <strong>Datum vyúčtování</strong> je den, kdy
+    podklady sestavuješ — v Excelu se objeví na prvním řádku.<br>
+    <strong>Prefix</strong> je kód akce. Objeví se uprostřed čísla na vytištěném dokladu
+    (<code>VPD TAB2026 01</code>), na titulním listu složky a v záhlaví každého Excelu jako
+    <em>Číslo akce</em>. V pokladní knize, ve složkách ani v ZIPu prefix není — tam zůstává
+    <code>VPD 01</code>, aby se stejný kód neopakoval na každém řádku. Nech ho prázdný,
+    dokud se s hospodářem nedomluvíš — doklady pak vyjdou jako <code>VPD 01</code>,
+    <code>VPD 02</code>…<br>
+    <strong>Pokladník</strong> se malým písmem natiskne pod podpisovou linku na tiskopisech
+    PPD a VPD; vybírá se z <a href="/lide">číselníku lidí</a>.{% if not lide %}
+    V číselníku zatím nikdo není — <a href="/lide">založ lidi</a>.{% endif %}
+  </small>
+
+  {% if uzivatel.je_spravce %}
+  <form method="post" action="/akce/{{ akce.id }}/limit-mista" class="radek nast-odstup-velky">
+    <label class="nast-limit">Limit místa na soubory (MB)
+      <input type="number" name="limit_mb" min="1" step="1"
+             value="{{ akce.misto_mb_limit or '' }}"
+             placeholder="výchozí ({{ misto_limit_mb }} MB)" {{ pole_zamcena }}>
+    </label>
+    <button type="submit" class="outline" {{ pole_zamcena }}>Uložit</button>
+    <small class="nast-zabrano">Zabráno {{ misto_pouzito_mb }} z {{ misto_limit_mb }} MB.</small>
+  </form>
+  {% endif %}
+
+  <form method="post" action="/akce/{{ akce.id }}/stav" id="stav-akce" class="radek nast-odstup-velky">
+    <button type="submit" class="secondary">
+      {% if akce.stav == 'uzavrena' %}Znovu otevřít akci{% else %}Označit jako uzavřenou{% endif %}
+    </button>
+  </form>
+</article>
+
+{% if uzivatel.je_spravce %}
+<details>
+  <summary>Smazat akci</summary>
+  <article class="nastaveni-akce">
+    <p>
+      Smaže akci včetně všech účtenek, složek a příjmů <strong>i souborů skenů na disku.</strong>
+      Nejde to vzít zpět — jedinou kopií pak zůstane záloha akce, takže si ji nejdřív stáhni.
+      Smazat akci smí jen správce.
+    </p>
+    <p>
+      <a href="/akce/{{ akce.id }}/zaloha" role="button" class="outline">Nejdřív stáhnout zálohu akce</a>
+    </p>
+    <form method="post" action="/akce/{{ akce.id }}/smazat">
+      <label>Pro potvrzení opiš přesný název akce
+        <input type="text" name="potvrzeni" placeholder="{{ akce.nazev }}" required {{ pole_zamcena }}>
+      </label>
+      <button type="submit" class="kontrast-chyba" {{ pole_zamcena }}>Smazat akci</button>
+    </form>
+  </article>
+</details>
+{% endif %}
+{% endblock %}

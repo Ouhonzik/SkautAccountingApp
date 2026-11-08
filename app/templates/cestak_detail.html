@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+{% block titulek %}{{ cestak.ucel_cesty }} — {{ akce.nazev }}{% endblock %}
+{% block telo_trida %}{% if akce_uzavrena %}jen-cteni{% endif %}{% endblock %}
+
+{% block styly %}
+  {% if mapa_zapnuta %}
+    <link rel="stylesheet" href="{{ url_for('static', path='leaflet/leaflet.css') }}?v={{ verze('leaflet/leaflet.css') }}">
+  {% endif %}
+{% endblock %}
+
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/tabulky.js') }}?v={{ verze('js/tabulky.js') }}" defer></script>
+  {% if mapa_zapnuta %}
+    <script src="{{ url_for('static', path='leaflet/leaflet.js') }}?v={{ verze('leaflet/leaflet.js') }}" defer></script>
+    <script src="{{ url_for('static', path='cestak_mapa.js') }}?v={{ verze('cestak_mapa.js') }}" defer></script>
+  {% endif %}
+{% endblock %}
+
+{% block obsah %}
+{% with aktivni = 'cestaky', podsekce = cestak.ucel_cesty %}
+  {% include "akce_menu.html" %}
+{% endwith %}
+
+<article class="cestak-hlavicka radek-upravy">
+  <span class="cestak-hlavicka-znacka">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 15l1.5-5A2 2 0 0 1 6.4 8.5h11.2a2 2 0 0 1 1.9 1.5L21 15"></path>
+      <path d="M3 15h18v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3Z"></path>
+      <circle cx="7.5" cy="17.5" r="1.6"></circle>
+      <circle cx="16.5" cy="17.5" r="1.6"></circle>
+    </svg>
+    Cesťák
+  </span>
+  {% if muze_psat %}
+    <button type="button" class="cestak-hlavicka-tuzka ikona outline" data-upravit
+            data-ikona="✎" data-ikona-hotovo="✓" aria-pressed="false"
+            title="Upravit údaje cesťáku" aria-label="Upravit údaje cesťáku">✎</button>
+  {% endif %}
+
+  <form method="post" action="/cestak/{{ cestak.id }}/ulozit" data-prubezne
+        class="cestak-hlavicka-obsah">
+    <div class="cestak-hlavicka-sloupec">
+      <h3>Příkaz</h3>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-ucel_cesty">Účel cesty</label>
+        <span class="hodnota">{{ cestak.ucel_cesty }}</span>
+        <input class="uprava" type="text" id="cestak-pole-ucel_cesty" name="ucel_cesty" value="{{ cestak.ucel_cesty }}" {{ pole_zamcena }}>
+      </div>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-misto">Místo</label>
+        <span class="hodnota">{{ cestak.misto or '—' }}</span>
+        <input class="uprava" type="text" id="cestak-pole-misto" name="misto" value="{{ cestak.misto or '' }}" {{ pole_zamcena }}>
+      </div>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-cestujici_id">Cestující</label>
+        <span class="hodnota">{{ cestak.cestujici.jmeno if cestak.cestujici else '—' }}</span>
+        <select class="uprava" id="cestak-pole-cestujici_id" name="cestujici_id" {{ pole_zamcena }}>
+          <option value="">— nevybráno —</option>
+          {% for c in lide %}
+            <option value="{{ c.id }}" {{ 'selected' if c.id == cestak.cestujici_id }}>{{ c.jmeno }}</option>
+          {% endfor %}
+        </select>
+        {% if not lide %}
+          <small class="uprava">V číselníku zatím nikdo není — <a href="/lide">založ lidi</a>.</small>
+        {% endif %}
+      </div>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-jednotka">Jednotka</label>
+        <span class="hodnota">{{ cestak.jednotka or '—' }}</span>
+        <input class="uprava" type="text" id="cestak-pole-jednotka" name="jednotka" value="{{ cestak.jednotka or '' }}" {{ pole_zamcena }}>
+      </div>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-spolucestujici">Spolucestující</label>
+        <span class="hodnota">{{ cestak.spolucestujici or '—' }}</span>
+        <input class="uprava" type="text" id="cestak-pole-spolucestujici" name="spolucestujici" value="{{ cestak.spolucestujici or '' }}" {{ pole_zamcena }}>
+      </div>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-poznamka">Poznámka</label>
+        <span class="hodnota">{{ cestak.poznamka or '—' }}</span>
+        <input class="uprava" type="text" id="cestak-pole-poznamka" name="poznamka" value="{{ cestak.poznamka or '' }}" {{ pole_zamcena }}>
+      </div>
+      {% if cestak.cestujici %}
+        <p class="cestak-hlavicka-vysvetlivka uprava">
+          Na papír se tiskne bydliště <strong>{{ cestak.adresa or '— nevyplněno —' }}</strong>
+          a kontakt <strong>{{ cestak.kontakt or '— nevyplněno —' }}</strong>.
+          Doplňuje se u člověka v <a href="/lide">číselníku Lidé</a>; oprava tam se promítne
+          do cesťáků v neuzavřených akcích, v uzavřené akci zůstává údaj z papíru.
+        </p>
+      {% endif %}
+    </div>
+
+    <div class="cestak-hlavicka-sloupec">
+      <h3>Prostředek</h3>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-vozidlo_id">Vozidlo</label>
+        <span class="hodnota">
+          {% if cestak.vozidlo %}{{ cestak.vozidlo.nazev }}{% if cestak.vozidlo.spz %} ({{ cestak.vozidlo.spz }}){% endif %}{% else %}—{% endif %}
+        </span>
+        <select class="uprava" id="cestak-pole-vozidlo_id" name="vozidlo_id" {{ pole_zamcena }}>
+          <option value="">— nevybráno —</option>
+          {% for v in vozidla %}
+            <option value="{{ v.id }}" {{ 'selected' if v.id == cestak.vozidlo_id }}>
+              {{ v.nazev }}{% if v.spz %} ({{ v.spz }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        {% if not vozidla %}
+          <small class="uprava">V číselníku zatím žádné vozidlo není — <a href="/vozidla">založ vozidla</a>.</small>
+        {% endif %}
+      </div>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-palivova_uctenka_id">Palivová účtenka</label>
+        <span class="hodnota">
+          {% if cestak.palivova_uctenka %}{{ cestak.palivova_uctenka.nazev or cestak.palivova_uctenka.puvodni_nazev }}{% else %}— žádná —{% endif %}
+        </span>
+        <select class="uprava" id="cestak-pole-palivova_uctenka_id" name="palivova_uctenka_id" {{ pole_zamcena }}>
+          <option value="">— žádná —</option>
+          {% for s in uctenky %}
+            <option value="{{ s.id }}" {{ 'selected' if s.id == cestak.palivova_uctenka_id }}>
+              {{ s.nazev or s.puvodni_nazev }}{% if s.cena_za_litr %} — {{ s.cena_za_litr|koruny }}/l{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-cena_za_litr">Cena paliva (Kč/l)</label>
+        <span class="hodnota">{{ cestak.cena_za_litr|koruny if cestak.cena_za_litr else '—' }}</span>
+        <input class="uprava" type="text" id="cestak-pole-cena_za_litr" name="cena_za_litr" inputmode="decimal"
+               value="{{ cestak.cena_za_litr|desetinne }}" {{ pole_zamcena }}>
+      </div>
+      <div class="cestak-hlavicka-pole">
+        <label class="popisek" for="cestak-pole-opotrebeni">Opotřebení (Kč/km)</label>
+        <span class="hodnota">{{ cestak.opotrebeni|koruny if cestak.opotrebeni else '—' }}</span>
+        <input class="uprava" type="text" id="cestak-pole-opotrebeni" name="opotrebeni" inputmode="decimal"
+               value="{{ cestak.opotrebeni|desetinne }}" {{ pole_zamcena }}>
+      </div>
+
+      <div class="cestak-hlavicka-souhrn">
+        <span>Ø spotřeba dle t.p.</span>
+        <strong>{% if cestak.spotreba %}{{ cestak.spotreba|desetinne }} l/100 km{% else %}—{% endif %}</strong>
+        <span>Cena PHM na 1 km</span>
+        <strong>{{ cena_phm|koruny }}</strong>
+        <span>Sazba náhrady</span>
+        <strong>{{ sazba|koruny }}/km</strong>
+      </div>
+    </div>
+    {% if not akce_uzavrena %}<button type="submit" data-bez-js class="cestak-hlavicka-ulozit">Uložit</button>{% endif %}
+  </form>
+</article>
+
+<h2>Provedené cesty</h2>
+
+<div class="cestak-mapa-plocha">
+  <article class="cestak-mapa-sloupec">
+    {% if mapa_zapnuta %}
+      <div class="mapa-rozlozeni{% if muze_psat %} s-panelem{% endif %}">
+        {% if muze_psat %}
+        {# Panel u mapy. Mapa jizdu nepridava - jen vyplnuje pole Z, Do a Km v radku
+           "Pridat jizdu" pod mapou (id jizda-*, viz cestak_mapa.js). Datum doplni
+           clovek a jizdu ulozi tlacitko toho radku. #}
+        <div class="mapa-panel" id="mapa-panel">
+          <p class="mapa-napoveda">
+            Jízdu si můžeš vyklikat: najdi místo v políčku <strong>Z</strong> či <strong>Do</strong>
+            v řádku pod mapou, nebo na ně klikni v mapě. Kilometry se doplní samy,
+            ty už jen vybereš datum a stiskneš <strong>Přidat</strong>.
+          </p>
+          <div class="mapa-volba" role="group" aria-label="Co nastaví další klik do mapy">
+            <span>Klik do mapy nastaví:</span>
+            <button type="button" class="outline drobne" data-bod="z" aria-pressed="true">
+              <i class="mapa-znacka z" aria-hidden="true"></i>Z (odkud)
+            </button>
+            <button type="button" class="outline drobne" data-bod="do" aria-pressed="false">
+              <i class="mapa-znacka do" aria-hidden="true"></i>Do (kam)
+            </button>
+          </div>
+
+          <p class="mapa-trasa" id="mapa-trasa" aria-live="polite">Vyhledej nebo klikni do mapy, odkud jsi jel.</p>
+
+          <div class="mapa-panel-tlacitka">
+            <button type="button" class="outline drobne" id="mapa-zrusit">Smazat body z mapy</button>
+          </div>
+        </div>
+        {% endif %}
+
+        <div id="mapa-cesty"
+             data-cestak="{{ cestak.id }}"
+             data-jizdy="{{ mapa_jizdy | tojson | forceescape }}"></div>
+      </div>
+      <p class="mapa-atribuce">
+        © Seznam.cz a.s. a další
+      </p>
+    {% else %}
+      <div class="mapa-vypnuta">
+        <p>
+          Mapa není zapnutá — v <code>.env</code> chybí <code>MAPY_API_KEY</code>.<br>
+          Jízdy piš rovnou do tabulky vpravo.
+        </p>
+      </div>
+    {% endif %}
+  </article>
+
+  <div class="cestak-jizdy-sloupec">
+{% if muze_psat %}
+{% set s_mapou = mapa_zapnuta %}
+{% set posledni = cestak.jizdy[-1] if cestak.jizdy else none %}
+{% set navazuje = s_mapou and posledni and posledni.do_lat is not none and posledni.do_lon is not none and posledni.kam %}
+<article class="pridavani">
+  {# Rucni radek jde pouzit i bez mapy. S mapou do nej klik v mape a hledani
+     vyplni Z, Do a Km (cestak_mapa.js); souradnice bodu jdou ve skrytych polich. #}
+  <form method="post" action="/cestak/{{ cestak.id }}/jizdy/pridat" class="radek" id="jizda-rucne" autocomplete="off">
+    <label style="flex:1" class="jz-datum">Datum
+      <input type="date" name="datum" id="jizda-datum">
+    </label>
+    {% if s_mapou %}
+    <div class="pole-mista jz-z" data-bod="z">
+      <label for="jizda-odkud"><i class="mapa-znacka z" aria-hidden="true"></i>Z</label>
+      <input type="text" name="odkud" id="jizda-odkud" placeholder="Brno Hlavní"
+             value="{{ posledni.kam if navazuje else '' }}"
+             role="combobox" aria-expanded="false" aria-controls="mapa-naseptavac-z"
+             aria-autocomplete="list">
+      <ul id="mapa-naseptavac-z" class="mapa-naseptavac" role="listbox" hidden></ul>
+    </div>
+    <div class="pole-mista jz-do" data-bod="do">
+      <label for="jizda-kam"><i class="mapa-znacka do" aria-hidden="true"></i>Do</label>
+      <input type="text" name="kam" id="jizda-kam" placeholder="Lidl Šumavská"
+             role="combobox" aria-expanded="false" aria-controls="mapa-naseptavac-do"
+             aria-autocomplete="list">
+      <ul id="mapa-naseptavac-do" class="mapa-naseptavac" role="listbox" hidden></ul>
+    </div>
+    <input type="hidden" name="z_lat" value="{{ posledni.do_lat if navazuje else '' }}">
+    <input type="hidden" name="z_lon" value="{{ posledni.do_lon if navazuje else '' }}">
+    <input type="hidden" name="do_lat">
+    <input type="hidden" name="do_lon">
+    {% else %}
+    <label style="flex:2" class="jz-z">Z
+      <input type="text" name="odkud" placeholder="Brno Hlavní">
+    </label>
+    <label style="flex:2" class="jz-do">Do
+      <input type="text" name="kam" placeholder="Lidl Šumavská">
+    </label>
+    {% endif %}
+    <label style="flex:1" class="jz-prostredek">Prostředek
+      <select name="prostredek" id="jizda-prostredek">
+        {% for klic, nazev in prostredky.items() %}
+          <option value="{{ klic }}" {{ 'data-na-km' if klic in prostredky_na_km }}>{{ nazev }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label style="flex:1" class="jz-km">Km nebo cena
+      <input type="text" name="km" id="jizda-km" inputmode="decimal" placeholder="7">
+    </label>
+    <button type="submit" class="zlute jz-pridat">Přidat</button>
+  </form>
+</article>
+{% endif %}
+
+{% if cestak.jizdy %}
+  <form method="post" action="/cestak/{{ cestak.id }}/jizdy/ulozit" data-prubezne>
+    <div class="siroka-tabulka">
+      <table class="husta cestak-jizdy-tabulka">
+        <colgroup>
+          <col class="sl-datum"><col class="sl-odkud"><col class="sl-kam">
+          <col class="sl-prostredek"><col class="sl-sazba"><col class="sl-hodnota">
+          <col class="sl-cena"><col class="sl-nastroje">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Z</th>
+            <th>Do</th>
+            <th>Prostředek</th>
+            <th class="cislo">Sazba náhr.</th>
+            <th class="cislo">Km nebo cena</th>
+            <th class="cislo">Cena</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for jizda, cena in radky %}
+            {% set pop = (jizda.odkud or '?') ~ ' → ' ~ (jizda.kam or '?') ~ (' (' ~ (jizda.datum|datum) ~ ')' if jizda.datum else '') %}
+            <tr>
+              <td class="jd-datum">
+                <span class="hodnota">{{ jizda.datum|datum if jizda.datum else '—' }}</span>
+                <input type="date" class="uprava" name="datum_{{ jizda.id }}"
+                       aria-label="Datum jízdy — {{ pop }}"
+                       value="{{ jizda.datum.isoformat() if jizda.datum else '' }}" {{ pole_zamcena }}>
+              </td>
+              <td class="jd-odkud">
+                <span class="hodnota">{{ jizda.odkud or '—' }}</span>
+                <input type="text" class="uprava" name="odkud_{{ jizda.id }}" value="{{ jizda.odkud or '' }}"
+                       aria-label="Odkud — {{ pop }}" {{ pole_zamcena }}>
+              </td>
+              <td class="jd-kam">
+                <span class="hodnota">{{ jizda.kam or '—' }}</span>
+                <input type="text" class="uprava" name="kam_{{ jizda.id }}" value="{{ jizda.kam or '' }}"
+                       aria-label="Kam — {{ pop }}" {{ pole_zamcena }}>
+              </td>
+              <td class="jd-prostredek">
+                <span class="hodnota">{{ jizda.nazev_prostredku }}</span>
+                <select class="uprava" name="prostredek_{{ jizda.id }}"
+                        aria-label="Prostředek — {{ pop }}" {{ pole_zamcena }}>
+                  {% for klic, nazev in prostredky.items() %}
+                    <option value="{{ klic }}" {{ 'selected' if klic == jizda.prostredek }}>{{ nazev }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="cislo jd-sazba">{{ sazba|koruny if jizda.je_na_km else '—' }}</td>
+              <td class="cislo jd-hodnota">
+                <span class="hodnota">
+                  {%- if jizda.je_na_km -%}
+                    {{ jizda.km|km if jizda.km is not none else '—' }}
+                  {%- else -%}
+                    {{ jizda.jizdne|koruny if jizda.jizdne is not none else '—' }}
+                  {%- endif -%}
+                </span>
+                <input type="text" class="uprava cislo" inputmode="decimal" name="hodnota_{{ jizda.id }}"
+                       aria-label="Km nebo cena — {{ pop }}"
+                       value="{% if jizda.je_na_km %}{{ jizda.km|km if jizda.km is not none else '' }}{% else %}{{ jizda.jizdne if jizda.jizdne is not none else '' }}{% endif %}" {{ pole_zamcena }}>
+              </td>
+              <td class="cislo jd-cena">{{ cena|koruny }}</td>
+              <td class="nastroje">
+                {% if muze_psat %}
+                  <button type="submit" form="presun_jizdy" class="secondary drobne"
+                          name="presun" value="{{ jizda.id }}:nahoru"
+                          title="O řádek výš" aria-label="Posunout jízdu {{ pop }} o řádek výš"
+                          {{ 'disabled' if loop.first }}>↑</button>
+                  <button type="submit" form="presun_jizdy" class="secondary drobne"
+                          name="presun" value="{{ jizda.id }}:dolu"
+                          title="O řádek níž" aria-label="Posunout jízdu {{ pop }} o řádek níž"
+                          {{ 'disabled' if loop.last }}>↓</button>
+                  <button type="button" class="secondary drobne" data-upravit
+                          data-ikona="✎" data-ikona-hotovo="✓"
+                          aria-pressed="false" title="Upravit řádek"
+                          data-radek="{{ pop }}" aria-label="Upravit řádek {{ pop }}">✎</button>
+                  <button type="submit" form="smazat_jizdu_{{ jizda.id }}"
+                          class="kontrast-chyba drobne" title="Smazat řádek"
+                          aria-label="Smazat jízdu {{ pop }}">×</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not akce_uzavrena %}<button type="submit" data-bez-js>Uložit</button>{% endif %}
+  </form>
+
+  {# Vnorene formulare HTML nepovoluje - tlacitka v tabulce se na ne odkazuji
+     pres atribut `form`. Jeden spolecny na presuny, jeden na kazde smazani. #}
+  {% if not akce_uzavrena %}
+  <form method="post" action="/cestak/{{ cestak.id }}/jizdy/presunout" id="presun_jizdy"></form>
+  {% for jizda, cena in radky %}
+    <form method="post" action="/jizda/{{ jizda.id }}/smazat" id="smazat_jizdu_{{ jizda.id }}"
+          data-potvrdit="Smazat jízdu {{ jizda.odkud or '?' }} → {{ jizda.kam or '?' }}?"></form>
+  {% endfor %}
+  {% endif %}
+
+  {% if co_chybi %}
+    {# Stejna pravidla, podle kterych cestak nepujde do vydaju (cestaky.co_chybi). #}
+    <p>
+      <span class="stitek pozor">Cesťák je neúplný</span>
+      {{ co_chybi|join(' ') }}
+    </p>
+  {% endif %}
+
+  {% if cestak.jizdy|length > jizd_na_stranku %}
+    <p>
+      <span class="stitek pozor">Nevejde se na jednu A4</span>
+      Jízd je {{ cestak.jizdy|length }}, na jeden list se jich vejde {{ jizd_na_stranku }} —
+      rozpis se při tisku přelije na druhou stránku. Nic se neztratí, jen z tiskárny
+      vyjedou dva papíry.
+    </p>
+  {% endif %}
+
+  <table class="souhrn bilance">
+    <tbody>
+      <tr><th>Ujeto</th><td class="cislo">{{ pocet_km|km }} km</td></tr>
+      <tr><th>Součet řádků</th><td class="cislo">{{ soucet|koruny }}</td></tr>
+      <tr>
+        <th><strong>Celkem po zaokrouhlení dolů</strong></th>
+        <td class="cislo"><strong>{{ celkem|koruny }}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+{% else %}
+  <p>Zatím žádná jízda. Přidej první výš{% if mapa_zapnuta %} — můžeš ji vyklikat v mapě{% endif %}.</p>
+{% endif %}
+  </div>
+</div>
+
+{% if not akce_uzavrena %}
+<form method="post" action="/cestak/{{ cestak.id }}/smazat" id="smazat_cestak"
+      data-potvrdit="Smazat celý cestovní příkaz „{{ cestak.ucel_cesty }}“ i se všemi jízdami?">
+  <input type="hidden" name="kam" value="/akce/{{ akce.id }}/cestaky">
+</form>
+<form method="post" action="/cestak/{{ cestak.id }}/do-vydaju" id="do_vydaju"></form>
+<form method="post" action="/cestak/{{ cestak.id }}/z-vydaju" id="z_vydaju"
+      data-potvrdit="Odebrat cesťák z pokladní knihy? Doklady se přečíslují."></form>
+{% endif %}
+
+<article>
+  <small>
+    U auta a motocyklu se do sloupce <strong>Km nebo cena</strong> píšou kilometry a náhrada
+    se spočítá sazbou. U vlaku a autobusu se tam píše <strong>zaplacená cena jízdenky</strong>
+    a kilometry se nepočítají — proto má sloupec na papíře obě jména.
+    Šipkami se řádky přesouvají, tužtičkou upravují, křížkem mažou. Ukládá se průběžně.
+  </small>
+</article>
+
+<p class="tlacitka cestak-zaverecne-tlacitka">
+  {% if cestak.je_ve_vydajich %}
+    <span class="stitek ok">Ve výdajích · {{ cislo_dokladu or 'VPD' }}</span>
+    {% if muze_psat %}
+      <button type="submit" form="z_vydaju" class="outline">Odebrat z výdajů</button>
+    {% endif %}
+  {% elif muze_psat %}
+    <button type="submit" form="do_vydaju" class="zelene">Přidat do výdajů</button>
+  {% endif %}
+  <a href="/cestak/{{ cestak.id }}/tisk" role="button" class="outline">🖨 Vytisknout</a>
+  {% if muze_psat %}
+    <button type="submit" form="smazat_cestak" class="kontrast-chyba">Smazat cesťák</button>
+  {% endif %}
+</p>
+{% endblock %}

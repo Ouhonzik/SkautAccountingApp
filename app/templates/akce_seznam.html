@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/akce_seznam.js') }}?v={{ verze('js/akce_seznam.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+<h1>Akce</h1>
+
+{% if uzivatel.muze_zapisovat %}
+<article class="nova-akce">
+  <form method="post" action="/akce" class="radek">
+    <label style="flex:2;min-width:12rem">Název akce
+      <input type="text" name="nazev" value="{{ stav_formulare.hodnota('nazev') }}"
+             placeholder="Lednová víkendovka" required{{ stav_formulare.atributy('nazev') }}>
+      {{ stav_formulare.napoveda('nazev') }}
+    </label>
+    <label>Akce od
+      <input type="date" name="datum_od" value="{{ stav_formulare.hodnota('datum_od') }}"{{ stav_formulare.atributy('datum_od') }}>
+      {{ stav_formulare.napoveda('datum_od') }}
+    </label>
+    <label>Akce do
+      <input type="date" name="datum_do" data-nejmene-podle="datum_od" value="{{ stav_formulare.hodnota('datum_do') }}"{{ stav_formulare.atributy('datum_do') }}>
+      {{ stav_formulare.napoveda('datum_do') }}
+    </label>
+    <label>Datum vyúčtování
+      <input type="date" name="datum_vyuctovani" value="{{ stav_formulare.hodnota('datum_vyuctovani') }}"{{ stav_formulare.atributy('datum_vyuctovani') }}>
+      {{ stav_formulare.napoveda('datum_vyuctovani') }}
+    </label>
+    <label style="flex:1.5;min-width:12rem">Pokladník akce
+      <select name="pokladnik"{{ stav_formulare.atributy('pokladnik') }}>
+        <option value="">—</option>
+        {% for c in lide %}
+          <option value="{{ c.id }}" {% if stav_formulare.hodnota('pokladnik') == c.id|string %}selected{% endif %}>{{ c.jmeno }}</option>
+        {% endfor %}
+      </select>
+      {{ stav_formulare.napoveda('pokladnik') }}
+      {% if not lide %}
+        <small>V číselníku zatím nikdo není — <a href="/lide">založ lidi</a> a pak se sem vrať.</small>
+      {% endif %}
+    </label>
+    <button type="submit" class="zlute">Založit akci</button>
+  </form>
+</article>
+{% endif %}
+
+{% macro tabulka_akci(seznam) %}
+  <div class="siroka-tabulka">
+  <table class="akce-tabulka">
+    <thead>
+      <tr><th>Akce</th><th>Termín</th><th>Vyúčtování</th><th class="cislo">Výdaje</th>
+          <th class="cislo">Příjmy</th><th class="cislo">Balance</th><th>Stav</th></tr>
+    </thead>
+    <tbody>
+      {% for a in seznam %}
+        <tr class="akce-radek">
+          <td class="akce-nazev"><a href="/akce/{{ a.id }}"><strong>{{ a.nazev }}</strong></a></td>
+          <td class="akce-termin">{% if a.ma_termin %}{{ a.datum_od|datum }} – {{ a.datum_do|datum }}{% endif %}</td>
+          <td class="akce-detail" data-popisek="Vyúčtování">{{ a.datum_vyuctovani|datum }}</td>
+          <td class="cislo akce-detail" data-popisek="Výdaje">{{ a.soucet_vydaju|koruny }}</td>
+          <td class="cislo akce-detail" data-popisek="Příjmy">{{ a.soucet_prijmu|koruny }}</td>
+          <td class="cislo akce-detail" data-popisek="Balance"><strong class="{{ 'kladne' if a.bilance >= 0 else 'zaporne' }}">{{ a.bilance|koruny }}</strong></td>
+          <td class="akce-stav">
+            {% if a.stav == 'uzavrena' %}
+              <span class="stitek">uzavřená</span>
+            {% else %}
+              <span class="stitek ok">rozpracovaná</span>
+            {% endif %}
+          </td>
+          <td class="akce-rozbalit-bunka"><button type="button" class="akce-rozbalit" aria-expanded="false" aria-label="Další údaje akce {{ a.nazev }}"></button></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% endmacro %}
+
+{% if akce %}
+  {{ tabulka_akci(akce) }}
+{% elif starsi_roky %}
+  <p>Žádná rozpracovaná ani v poslední době uzavřená akce tu není. Starší akce jsou níž.</p>
+{% else %}
+  <p>Zatím tu žádná akce není.{% if uzivatel.muze_zapisovat %} Založ první akci formulářem nahoře.{% endif %}</p>
+{% endif %}
+
+{% if starsi_roky %}
+  {# Starší uzavřené akce: jen roky s počtem; samotné akce se načtou až po výběru roku. #}
+  <details id="starsi-akce"{% if vybrany_rok %} open{% endif %}>
+    <summary>Starší akce ({{ starsi_pocet }})</summary>
+    <p>
+      {% for r, pocet in starsi_roky %}
+        <a href="/?rok={{ r }}#starsi-akce" role="button" class="drobne {{ 'secondary' if r == vybrany_rok else 'outline' }}"{% if r == vybrany_rok %} aria-current="true"{% endif %}>{{ r }} ({{ pocet }})</a>
+      {% endfor %}
+    </p>
+    {% if vybrany_rok %}
+      {% if starsi_akce %}
+        {{ tabulka_akci(starsi_akce) }}
+      {% else %}
+        <p>Pro rok {{ vybrany_rok }} tu žádná starší akce není.</p>
+      {% endif %}
+    {% endif %}
+  </details>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block titulek %}Doklady — {{ akce.nazev }}{% endblock %}
+
+{% block styly %}
+  <link rel="stylesheet" href="{{ url_for('static', path='tisk.css') }}?v={{ verze('tisk.css') }}">
+{% endblock %}
+
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/prohlizec_dokladu.js') }}?v={{ verze('js/prohlizec_dokladu.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+{% with aktivni = 'doklady' %}{% include "akce_menu.html" %}{% endwith %}
+
+{# Vsechno, co neni papir, se pri tisku schova - proto ta obalka. #}
+<div class="netisknout">
+  {% if pocet_bez_data or pocet_mimo_slozku %}
+    <article>
+      <p><span class="stitek chyba-stitek">Doklady nejsou úplné</span></p>
+      <ul>
+        {% if pocet_bez_data %}
+          <li>{{ pocet_bez_data|mnozne('doklad nemá', 'doklady nemají', 'dokladů nemá') }}
+              datum — kolonka „Ze dne“ zůstane prázdná. Doplň datum na účtence
+              nebo u příjmu; „Ze dne“ je den, kdy peníze pohnuly, a datum vyúčtování
+              akce ho nenahradí.</li>
+        {% endif %}
+        {% if pocet_mimo_slozku %}
+          <li>{{ pocet_mimo_slozku|mnozne('účtenka není', 'účtenky nejsou', 'účtenek není') }}
+              ve složce — každá dostala vlastní doklad místo toho, aby patřila k ostatním.</li>
+        {% endif %}
+      </ul>
+      <p class="tlacitka">
+        {% if pocet_bez_data %}
+          <a href="/akce/{{ akce.id }}/skeny" role="button" class="outline">Účtenky</a>
+          <a href="/akce/{{ akce.id }}/prijmy" role="button" class="outline">Příjmy</a>
+        {% endif %}
+        {% if pocet_mimo_slozku %}
+          <a href="/akce/{{ akce.id }}/slozky" role="button" class="outline">Zařadit do složek</a>
+        {% endif %}
+      </p>
+    </article>
+  {% endif %}
+
+  {% if tiskopisy %}
+    <div class="kniha-zahlavi">
+      <h2>
+        {% if jen_titulni %}Titulní list{% elif jen_jeden %}Jeden doklad{% else %}Doklady ({{ tiskopisy|length }}){% endif %}
+      </h2>
+      <p class="tlacitka">
+        {% if jen_jeden or jen_titulni %}
+          <a href="/akce/{{ akce.id }}/doklady" role="button" class="outline drobne">Zpět na všechny</a>
+        {% endif %}
+        <button type="button" class="zlute" data-tisk>
+          {% if jen_titulni %}Vytisknout titulní list
+          {%- elif jen_jeden %}Vytisknout doklad
+          {%- else %}Vytisknout všechny{% endif %}
+        </button>
+      </p>
+    </div>
+    <small>
+      Tiskne se z prohlížeče (totéž jako Ctrl+P) — jeden doklad na jednu A4;
+      při tisku všech vyjede jako první titulní list se soupisem a dá se vytisknout
+      i sám. V dialogu tisku
+      nech okraje na nule a vypni záhlaví a zápatí prohlížeče, aby se papír nezmenšil.
+      Čísla dokladů jsou tatáž jako ve sloupci <strong>Dokl.</strong> v pokladní knize.
+    </small>
+  {% endif %}
+</div>
+
+{% if tiskopisy %}
+  <div class="doklady-plocha">
+    {# Uvodni strana slozky. Je to tentyz papir jako doklad (stejna sirka,
+       stejny pruh na vazbu), jen se na nej nic nelepi - proto se cara, za
+       kterou uz uctenka nesmi, na nem nekresli. #}
+    {% if titulni %}
+      <article class="doklad titulni">
+        <div class="doklad-vazba" aria-hidden="true">
+          <span class="doklad-dira prvni"></span>
+          <span class="doklad-dira druha"></span>
+        </div>
+
+        <header class="doklad-hlavicka">
+          <img class="titulni-znak" src="{{ url_for('static', path='kormorani-badge-300.png') }}?v={{ verze('kormorani-badge-300.png') }}" alt="">
+          <div class="doklad-stredisko">
+            <strong>{{ stredisko }}</strong>
+            <span>{{ sidlo }}</span>
+            <span>IČO: {{ ico }} · DIČ: {{ dic }}</span>
+          </div>
+        </header>
+
+        <p class="titulni-nadpis">Vyúčtování akce</p>
+        <h2 class="titulni-akce">{{ titulni.nazev_akce }}</h2>
+
+        <div class="titulni-udaje">
+          <div class="doklad-pole">
+            <span class="popisek">Termín akce</span>
+            <span class="hodnota">
+              {%- if titulni.ma_termin %}
+                {{- titulni.datum_od|datum }}
+                {%- if not titulni.jednodenni %} – {{ titulni.datum_do|datum }}{% endif -%}
+              {% endif -%}
+            </span>
+          </div>
+          <div class="doklad-pole">
+            <span class="popisek">Datum vyúčtování</span>
+            <span class="hodnota">{{ titulni.datum_vyuctovani|datum }}</span>
+          </div>
+          <div class="doklad-pole">
+            {# Prefix cisel dokladu - podle nej se papir pozna mezi akcemi. #}
+            <span class="popisek">Kód akce (v číslech dokladů)</span>
+            <span class="hodnota">{{ titulni.prefix }}</span>
+          </div>
+          <div class="doklad-pole">
+            <span class="popisek">Pokladník akce</span>
+            <span class="hodnota">{{ titulni.pokladnik }}</span>
+          </div>
+        </div>
+
+        <div class="titulni-souhrn">
+          <div class="titulni-castka">
+            <span class="popisek">Příjmy celkem</span>
+            <strong>{{ titulni.prijmy|koruny }}</strong>
+          </div>
+          <div class="titulni-castka">
+            <span class="popisek">Výdaje celkem</span>
+            <strong>{{ titulni.vydaje|koruny }}</strong>
+          </div>
+          <div class="titulni-castka bilance">
+            <span class="popisek">Balance (příjmy − výdaje)</span>
+            <strong>{{ titulni.bilance|koruny }}</strong>
+          </div>
+        </div>
+
+        {# Kontrola uplnosti: kolik papiru ma ve slozce doopravdy byt. #}
+        <p class="titulni-pocty">
+          Složka obsahuje
+          {{ titulni.pocet_dokladu|mnozne('doklad', 'doklady', 'dokladů') }} ·
+          {{ titulni.pocet_uctenek|mnozne('účtenku', 'účtenky', 'účtenek') }} ·
+          {{ titulni.pocet_priloh|mnozne('přílohu', 'přílohy', 'příloh') }}
+        </p>
+
+        <table class="doklad-rozpis titulni-soupis">
+          <thead>
+            <tr>
+              <th>Č.</th>
+              <th>Ze dne</th>
+              <th>Účel platby</th>
+              <th>Komu / od koho</th>
+              <th class="cislo">Částka</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in titulni.doklady %}
+              <tr>
+                <td class="oznaceni">{{ d.oznaceni }}</td>
+                <td>{{ d.datum|datum }}</td>
+                <td>{{ d.ucel }}</td>
+                <td>{{ d.osoba or '' }}</td>
+                <td class="cislo">{{ d.castka|koruny }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          {# Dva soucty, ne jeden: ve sloupci lezi vedle sebe prijmy i vydaje,
+             takze jejich spolecny soucet by nic neznamenal. #}
+          <tfoot>
+            <tr>
+              <td colspan="4">Příjmy celkem</td>
+              <td class="cislo">{{ titulni.prijmy|koruny }}</td>
+            </tr>
+            <tr>
+              <td colspan="4">Výdaje celkem</td>
+              <td class="cislo">{{ titulni.vydaje|koruny }}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="titulni-vypln"></div>
+        <footer class="doklad-paticka">
+          Titulní list · {{ titulni.nazev_akce }}{% if titulni.rok %} · {{ titulni.rok }}{% endif %}
+        </footer>
+      </article>
+
+      {% if not jen_titulni %}
+        <p class="tlacitka netisknout">
+          <a href="/akce/{{ akce.id }}/doklady?doklad=titulni" role="button"
+             class="outline drobne">Vytisknout jen titulní list</a>
+        </p>
+      {% endif %}
+    {% endif %}
+
+    {% for t in tiskopisy if not jen_titulni %}
+      {% set rok = t.datum.year if t.datum else (akce.datum_vyuctovani.year if akce.datum_vyuctovani else '') %}
+      <article class="doklad">
+        {# Znacky na derovani a cara, za kterou se uz nelepi - jinak by uctenka
+           prekryla dirky a doklad by neslo zalozit do sanonu. #}
+        <div class="doklad-vazba" aria-hidden="true">
+          <span class="doklad-dira prvni"></span>
+          <span class="doklad-dira druha"></span>
+        </div>
+
+        <header class="doklad-hlavicka">
+          {# Odznak, ne kormorani-logo.svg - to ma kolem ptaka obrovsky prazdny
+             ramec a na papire by z nej zbyl drobecek. #}
+          <img src="{{ url_for('static', path='kormorani-badge-300.png') }}?v={{ verze('kormorani-badge-300.png') }}" alt="">
+          <div class="doklad-stredisko">
+            <strong>{{ stredisko }}</strong>
+            <span>{{ sidlo }}</span>
+            <span>IČO: {{ ico }} · DIČ: {{ dic }}</span>
+          </div>
+          <div class="doklad-cislo">
+            <span class="popisek">Doklad č.</span>
+            <strong>{{ t.oznaceni }}</strong>
+          </div>
+        </header>
+
+        <h2 class="doklad-nazev">{{ t.nazev_tiskopisu }}</h2>
+
+        {# Pole jdou po dvou vedle sebe, aby se zaklad dokladu vesel do horni
+           tretiny A4. Zbytek listu patri nalepenym uctenkam. #}
+        <div class="doklad-dvojice">
+          <div class="doklad-pole">
+            <span class="popisek">Ze dne</span>
+            <span class="hodnota">{{ t.datum|datum }}</span>
+          </div>
+          <div class="doklad-pole uzke">
+            <span class="popisek">Přílohy</span>
+            <span class="hodnota">{% if t.pocet_priloh %}{{ t.pocet_priloh }} ks{% endif %}</span>
+          </div>
+          {# Kam papír patří. Stojí tady, a ne na vlastním řádku, protože
+             svislé místo na dokladu patří nalepeným účtenkám. Příjem ani
+             ruční řádek složku nemá, tak se pole vůbec nevysází. #}
+          {% if t.nazev_slozky %}
+            <div class="doklad-pole siroke">
+              <span class="popisek">Název složky</span>
+              <span class="hodnota">{{ t.nazev_slozky }}</span>
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="doklad-dvojice">
+          <div class="doklad-pole">
+            <span class="popisek">{{ t.popisek_osoby }}</span>
+            <span class="hodnota">{{ t.osoba or '' }}</span>
+          </div>
+          <div class="doklad-pole siroke">
+            <span class="popisek">Účel platby</span>
+            <span class="hodnota">{{ t.ucel }}</span>
+          </div>
+        </div>
+
+        <div class="doklad-dvojice">
+          <div class="doklad-pole castka uzke">
+            <span class="popisek">Částka</span>
+            <span class="hodnota">{{ t.castka|koruny }}</span>
+          </div>
+          <div class="doklad-pole siroke">
+            <span class="popisek">Slovy</span>
+            <span class="hodnota">{{ t.slovy }}</span>
+          </div>
+        </div>
+
+        {% if t.ma_rozpis %}
+          <table class="doklad-rozpis">
+            <thead>
+              <tr><th>Dne</th><th>Účtenka</th><th>Kategorie</th><th class="cislo">Částka</th></tr>
+            </thead>
+            <tbody>
+              {% for p in t.polozky %}
+                <tr>
+                  <td>{{ p.datum|datum }}</td>
+                  <td>
+                    {{ p.ucel }}
+                    {# Priloha nema vlastni radek ani castku - jen se pod svou
+                       uctenkou ohlasi, aby bylo videt, co je k ni nalepene. #}
+                    {% for pr in p.prilohy %}
+                      <span class="doklad-priloha">příloha: {{ pr }}</span>
+                    {% endfor %}
+                  </td>
+                  <td>{{ p.kategorie or '' }}</td>
+                  <td class="cislo">{{ p.castka|koruny }}</td>
+                </tr>
+                {# Rozdelena uctenka: pod jejim radkem se rozepise, kolik pripadlo
+                   ktere kategorii. Castka uctenky uz je zapocitana vys, tyhle
+                   podradky ji jen rozepisuji - do "Celkem" proto nevstupuji. #}
+                {% for c in p.casti %}
+                  <tr class="doklad-cast">
+                    <td></td>
+                    <td>{% if c.popis %}{{ c.popis }}{% endif %}</td>
+                    <td>{{ c.kategorie }}</td>
+                    <td class="cislo">{{ c.castka|koruny }}</td>
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3">Celkem</td>
+                <td class="cislo">{{ t.castka|koruny }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        {% endif %}
+
+        {# Prilohy, ktere k zadne uctence v rozpisu nepatri. Na papire jsou taky,
+           takze se musi jmenovat - jinak by se nedalo dohledat, co je nalepene. #}
+        {% if t.prilohy_bokem %}
+          <p class="doklad-prilohy-bokem">
+            <span class="popisek">Přílohy</span>
+            {{ t.prilohy_bokem|join(', ') }}
+          </p>
+        {% endif %}
+
+        <div class="doklad-podpisy">
+          <div class="doklad-podpis">
+            <span class="misto"></span>
+            <span class="popisek">Schválil</span>
+            <span class="jmeno"></span>
+          </div>
+          <div class="doklad-podpis">
+            <span class="misto"></span>
+            <span class="popisek">Pokladník</span>
+            <span class="jmeno">{{ akce.pokladnik or '' }}</span>
+          </div>
+          <div class="doklad-podpis">
+            <span class="misto"></span>
+            <span class="popisek">{% if t.je_prijem %}Odevzdal{% else %}Příjemce{% endif %}</span>
+            <span class="jmeno">{{ t.osoba or '' }}</span>
+          </div>
+        </div>
+
+        <p class="doklad-lepeni">Sem nalep originály účtenek</p>
+        <footer class="doklad-paticka">
+          {{ akce.nazev }}{% if rok %} · {{ rok }}{% endif %}
+        </footer>
+      </article>
+
+      <p class="tlacitka netisknout">
+        <a href="/akce/{{ akce.id }}/doklady?doklad={{ t.klic }}" role="button"
+           class="outline drobne">Vytisknout jen {{ t.oznaceni }}</a>
+      </p>
+    {% endfor %}
+  </div>
+  {% include "doklad_prohlizec.html" %}
+{% else %}
+  <p>
+    Zatím není co tisknout. Doklady vzniknou samy, jakmile budou účtenky ve složkách
+    a přibudou příjmy — složka je výdajový doklad, příjem příjmový.
+  </p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titulek %}Dočasné heslo{% endblock %}
+
+{% block obsah %}
+<h1>Dočasné heslo pro „{{ ucet.jmeno }}“</h1>
+
+<article>
+  <p>
+    Přihlašovací jméno: <code>{{ ucet.login }}</code><br>
+    Dočasné heslo: <code style="font-size: 1.3em">{{ heslo }}</code>
+  </p>
+  <p>
+    <strong>Zapiš si ho nebo rovnou předej „{{ ucet.jmeno }}“ osobně — znovu se tu už nezobrazí.</strong>
+    Při prvním přihlášení appka rovnou vyzve ke změně na vlastní heslo.
+    Dočasné heslo platí 7 dní — kdo se s ním do té doby nepřihlásí, dostane od tebe nové.
+  </p>
+  <a href="/uzivatele" role="button" class="secondary">Zpět na seznam uživatelů</a>
+</article>
+{% endblock %}

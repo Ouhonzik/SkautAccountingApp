@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block titulek %}Uživatelé{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/okno.js') }}?v={{ verze('js/okno.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/limity.js') }}?v={{ verze('js/limity.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+<h1>Uživatelé</h1>
+<p>Kdo má do aplikace přístup a s jakou rolí. Smazat jde jen deaktivovaný účet, a smaže se i s jeho záznamy v logu činnosti a ve statistice čtení AI.</p>
+
+<article>
+  <form method="post" action="/uzivatele/pridat" class="radek" id="pridat_uzivatele">
+    <label style="flex:1">Přihlašovací jméno
+      <input type="text" name="login" value="{{ stav_formulare.hodnota('login') }}"
+             placeholder="jan.novak" required{{ stav_formulare.atributy('login') }}>
+      {{ stav_formulare.napoveda('login') }}
+    </label>
+    <label style="flex:2">Jméno
+      <input type="text" name="jmeno" value="{{ stav_formulare.hodnota('jmeno') }}"
+             placeholder="Jan Novák" required{{ stav_formulare.atributy('jmeno') }}>
+      {{ stav_formulare.napoveda('jmeno') }}
+    </label>
+    <label style="flex:2">E-mail (nepovinné)
+      <input type="email" name="email" value="{{ stav_formulare.hodnota('email') }}"
+             placeholder="jan@priklad.cz"{{ stav_formulare.atributy('email') }}>
+      {{ stav_formulare.napoveda('email') }}
+    </label>
+    <label style="flex:1">Role
+      <select name="role"{{ stav_formulare.atributy('role') }}>
+        {% for role in role_volby %}
+          <option value="{{ role }}" {% if role == (stav_formulare.hodnota('role', 'uzivatel')) %}selected{% endif %}>{{ role_nazvy[role] }}</option>
+        {% endfor %}
+      </select>
+      {{ stav_formulare.napoveda('role') }}
+    </label>
+    <button type="submit" class="zlute">Přidat</button>
+  </form>
+  <label>
+    <input type="checkbox" name="poslat_pozvanku" form="pridat_uzivatele" value="true"
+           {% if stav_formulare.zaskrtnuto('poslat_pozvanku') %}checked{% endif %}>
+    Poslat pozvánku e-mailem místo dočasného hesla (vyžaduje vyplněný e-mail výš)
+  </label>
+</article>
+
+{# Na telefonu je z kazdeho uctu kratky radek (jmeno, stav) a klepnuti otevre okno s polickami
+   a tlacitky (js/okno.js, K-223). Policka zustavaji v tomhle formulari, takze se vsechna
+   posilaji vzdy a uklada se tlacitkem Ulozit. Na pocitaci je kazdy ucet jeden
+   nizky radek (`uzivatele-tabulka` v app.css). #}
+<form method="post" action="/uzivatele/ulozit"
+      data-okno-seznam data-okno-nadpis="Upravit uživatele">
+  <div class="siroka-tabulka">
+  <table class="okno-tabulka uzivatele-tabulka">
+    <thead>
+      <tr>
+        <th>Jméno</th><th>Login</th><th>E-mail</th><th>Role</th><th>Stav</th>
+        <th>Poslední přihlášení</th><th>Činnost</th><th class="cislo">Čtení AI</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in uzivatele %}
+        <tr data-okno-radek>
+          <td class="uzivatel-jmeno" data-okno-pole="Jméno"><input type="text" name="jmeno_{{ u.id }}" value="{{ u.jmeno }}"
+                     aria-label="Jméno — {{ u.login }}"></td>
+          <td data-okno-pole="Přihlašovací jméno"><code>{{ u.login }}</code></td>
+          <td class="uzivatel-email" data-okno-pole="E-mail">
+            <input type="email" name="email_{{ u.id }}" value="{{ u.email or '' }}"
+                   aria-label="E-mail — {{ u.login }}">
+            {% if u.email %}
+              {% if u.email_overen %}
+                <span class="stitek ok drobne">ověřen</span>
+              {% else %}
+                <span class="stitek pozor drobne">neověřen</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td data-okno-pole="Role">
+            {% if u.id == uzivatel.id %}
+              {{ role_nazvy[u.role] }}
+            {% else %}
+              <select name="role_{{ u.id }}" aria-label="Role — {{ u.login }}">
+                {% for role in role_volby %}
+                  <option value="{{ role }}" {% if role == u.role %}selected{% endif %}>{{ role_nazvy[role] }}</option>
+                {% endfor %}
+              </select>
+            {% endif %}
+          </td>
+          <td data-okno-pole="Stav">
+            {% if u.aktivni %}
+              <span class="stitek ok">aktivní</span>
+            {% else %}
+              <span class="stitek chyba-stitek">neaktivní</span>
+            {% endif %}
+            {# Pozvat jde jen účet, který ještě nikdy nebyl aktivní. Deaktivovaný
+               vrací jen tlačítko Aktivovat, ne pozvánka. #}
+            {% if not u.aktivni and not u.nekdy_aktivni %}
+              {% set pozvanka = posledni_pozvanky.get(u.id) %}
+              {% if pozvanka %}
+                {% if pozvanka.stav == 'selhalo' %}
+                  <span class="stitek chyba-stitek">pozvánka selhala</span>
+                {% else %}
+                  <span class="stitek">pozvánka {{ pozvanka.vytvoreno | datum }}</span>
+                {% endif %}
+                {% if u.email %}
+                  <button type="submit" form="pozvat_znovu_{{ u.id }}" class="outline drobne"
+                          title="Poslat pozvánku znovu"
+                          aria-label="Znovu poslat pozvánku — {{ u.login }}">Znovu</button>
+                {% endif %}
+              {% elif u.email %}
+                <button type="submit" form="pozvat_znovu_{{ u.id }}" class="outline drobne"
+                        title="Poslat pozvánku"
+                        aria-label="Pozvat — {{ u.login }}">Pozvat</button>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td data-okno-pole="Poslední přihlášení">{{ u.posledni_prihlaseni.strftime('%d. %m. %Y %H:%M') if u.posledni_prihlaseni else 'nikdy' }}</td>
+          <td data-okno-pole="Činnost"><a href="/log?uzivatel={{ u.id }}">zobrazit</a></td>
+          <td class="cislo" data-okno-pole="Čtení AI">
+            {{ cteni_ai[u.id].pocet }}×
+            {% if cteni_ai[u.id].pocet %}<small>· {{ cteni_ai[u.id].kc|koruny }}{% if cteni_ai[u.id].nezname %} + ?{% endif %}</small>{% endif %}
+          </td>
+          <td class="uzivatel-akce" data-okno-akce>
+            {# Okno Limity je mimo tento formular (formulare se nevnorují) a otevira ho js/limity.js. #}
+            <button type="button" class="outline drobne" data-limity="limity_{{ u.id }}"
+                    aria-haspopup="dialog" title="Limity čtení AI"
+                    aria-label="Limity čtení AI — {{ u.login }}">Limity</button>
+            <button type="submit" form="heslo_{{ u.id }}" class="outline drobne" title="Vygenerovat nové dočasné heslo"
+                    aria-label="Nové heslo — {{ u.login }}">Nové heslo</button>
+            {% if u.id != uzivatel.id %}
+              {% if u.aktivni %}
+                <button type="submit" form="aktivni_{{ u.id }}" class="kontrast-chyba drobne"
+                        title="Deaktivovat"
+                        aria-label="Deaktivovat — {{ u.login }}">Deaktivovat</button>
+              {% else %}
+                <button type="submit" form="aktivni_{{ u.id }}" class="secondary drobne" title="Aktivovat"
+                        aria-label="Aktivovat — {{ u.login }}">Aktivovat</button>
+                {# Smazat jde jen deaktivovaný účet; server to ověřuje znovu. #}
+                <button type="submit" form="smazat_{{ u.id }}" class="kontrast-chyba drobne"
+                        title="Smazat účet i jeho záznamy"
+                        aria-label="Smazat — {{ u.login }}">Smazat</button>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td class="okno-kratky">
+            <button type="button" class="okno-otevrit" aria-haspopup="dialog">
+              <span class="okno-nazev" data-zrcadlo="jmeno_{{ u.id }}">{{ u.jmeno }}</span>
+              <span class="okno-hodnota">
+                {% if u.aktivni %}<span class="stitek ok">aktivní</span>{% else %}<span class="stitek chyba-stitek">neaktivní</span>{% endif %}
+              </span>
+            </button>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <button type="submit">Uložit</button>
+</form>
+
+{% for u in uzivatele %}
+  {# Dotaz patri na <form>, ne na tlacitko: `submit` se spousti na formulari. #}
+  <form method="post" action="/uzivatele/{{ u.id }}/nove-heslo" id="heslo_{{ u.id }}"
+        {% if u.aktivni and u.email %}data-potvrdit="Poslat „{{ u.jmeno }}“ e-mailem odkaz na nastavení nového hesla? Staré heslo platí, dokud ho člověk přes odkaz nezmění."
+        {% else %}data-potvrdit="Vygenerovat nové heslo pro „{{ u.jmeno }}“? Staré přestane platit a dotyčného to hned odhlásí."{% endif %}></form>
+  <form method="post" action="/uzivatele/{{ u.id }}/aktivni" id="aktivni_{{ u.id }}"
+        {% if u.aktivni %}data-potvrdit="Deaktivovat „{{ u.jmeno }}“? Nepřihlásí se, dokud ho znovu neaktivuješ."{% endif %}></form>
+  <form method="post" action="/uzivatele/{{ u.id }}/pozvat-znovu" id="pozvat_znovu_{{ u.id }}"></form>
+  {% if not u.aktivni and u.id != uzivatel.id %}
+    <form method="post" action="/uzivatele/{{ u.id }}/smazat" id="smazat_{{ u.id }}"
+          data-potvrdit="Smazat účet „{{ u.jmeno }}“ úplně? Smaže se i všechno, co je v logu činnosti a ve statistice čtení AI jeho, a nejde to vrátit."></form>
+  {% endif %}
+  {# Okno s limity čtení AI jednoho účtu. Má vlastní formulář a ukládá se samo (POST /uzivatele/<id>/limity);
+     limity platí hned, 0 = čtení vypnuté. Meze posuvníků jsou stejné jako na serveru. #}
+  <dialog class="okno-limity" id="limity_{{ u.id }}" aria-labelledby="limity_nadpis_{{ u.id }}">
+    <article>
+      <form method="post" action="/uzivatele/{{ u.id }}/limity">
+        <div class="limity-hlavicka">
+          <h3 id="limity_nadpis_{{ u.id }}">Limity čtení AI</h3>
+          <small>{{ u.jmeno }}</small>
+        </div>
+        <div class="limity-telo">
+          <p class="limity-vyuziti">
+            Dnes <strong>{{ vyuziti[u.id].dnes_pocet }}×</strong> · <strong>{{ vyuziti[u.id].dnes_kc|koruny }}</strong><br>
+            Letos <strong>{{ vyuziti[u.id].rok_kc|koruny }}</strong>
+          </p>
+          {% for pole, popisek, jednotka, nejmene, nejvice, krok in limity_ai %}
+            <label>{{ popisek }}: <output>{{ u[pole] }}</output> {{ jednotka }}
+              <input type="range" name="{{ pole }}" value="{{ u[pole] }}"
+                     aria-label="{{ popisek }} — {{ u.login }}"
+                     min="{{ nejmene }}" max="{{ nejvice }}" step="{{ krok }}">
+            </label>
+          {% endfor %}
+          <small>Při 0 čtení za den je čtení AI pro tenhle účet vypnuté.</small>
+        </div>
+        <div class="limity-paticka">
+          <button type="submit" class="zlute">Uložit</button>
+          <button type="button" class="outline limity-zavrit">Zavřít</button>
+        </div>
+      </form>
+    </article>
+  </dialog>
+{% endfor %}
+
+<article>
+  <small>
+    <strong>Revizor</strong> smí jen číst a stahovat výstupy (Excely, ZIP, zálohu), nic neuloží.
+    Aspoň jeden aktivní <strong>správce</strong> musí v appce zůstat vždycky — poslední správce
+    proto nejde deaktivovat ani mu odebrat roli, ani sám sobě. <strong>Smazat</strong> jde jen
+    deaktivovaný účet; zmizí s ním jeho záznamy v logu činnosti a ve statistice čtení AI a nejde to vrátit.
+  </small>
+</article>
+{% endblock %}

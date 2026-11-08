@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+{% block titulek %}Účtenky — {{ akce.nazev }}{% endblock %}
+{% block telo_trida %}{% if akce_uzavrena %}jen-cteni{% endif %}{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/soubory.js') }}?v={{ verze('js/soubory.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/tabulky.js') }}?v={{ verze('js/tabulky.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/lupa.js') }}?v={{ verze('js/lupa.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/okno.js') }}?v={{ verze('js/okno.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+{# Jedna moznost vyberu "patri k..." - pouziva ji vyber u prilohy i sablona moznosti. #}
+{% macro moznost_prilohy(c, vybrane_id) -%}
+  <option value="{{ c.id }}" {% if vybrane_id == c.id %}selected{% endif %}>
+    {{- c.nazev or c.puvodni_nazev }}{% if c.slozka %} · {{ c.slozka.nazev }}{% endif -%}
+  </option>
+{%- endmacro %}
+{% with aktivni = 'skeny' %}{% include "akce_menu.html" %}{% endwith %}
+
+<div class="pracovni-plocha">
+
+  {# 1. Nahrani. Tlacitko Nahrat tu neni schvalne - soubory se odesilaji hned,
+     jak je vyberes nebo pretahnes. Bez JavaScriptu se tlacitko ukaze. #}
+  {% if muze_psat %}
+  <article>
+    <h3>1. Nahrát účtenky</h3>
+    <form method="post" action="/akce/{{ akce.id }}/skeny/nahrat" enctype="multipart/form-data">
+      <div class="pretahovani pretahovani-uctenky" data-pretahovani>
+        <span class="vyzva">Přetáhni sem soubory</span>
+        <small>nebo si je vyber ze složky</small>
+        <input type="file" name="soubory" multiple aria-label="Vybrat účtenky ze složky"
+               accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.webp">
+        {# Jen na telefonu (CSS): fotoaparat misto vyberu ze slozky. Policko nema
+           `name` - js/soubory.js z nej soubor presune do hlavniho policka, takze
+           jde stejnou cestou a stejnymi kontrolami jako bezne nahrani. #}
+        <label class="fotoaparat" role="button">Naskenovat fotoaparátem
+          <input type="file" accept="image/*" capture="environment" data-fotoaparat
+                 aria-label="Naskenovat účtenku fotoaparátem">
+        </label>
+      </div>
+      <button type="submit" data-bez-js>Nahrát</button>
+    </form>
+    <small>PDF i fotky, klidně všechny najednou. Vícestránkové PDF je jedna účtenka.</small>
+
+    {# Cekarna na cerstve nahrane soubory. Jakmile je AI precte, radek odsud zmizi
+       a zije dal v tabulce dole. Proto tu ukazujeme puvodni nazev souboru z disku,
+       ne ten, ktery uctence pozdeji da AI. #}
+    {% if neprectene %}
+      <ul class="seznam-souboru">
+        {% for s in neprectene %}
+          <li>
+            <span title="{{ s.puvodni_nazev }}">{{ s.puvodni_nazev }}</span>
+            <button type="submit" form="smazat_{{ s.id }}" class="kontrast-chyba drobne"
+                    title="Smazat účtenku" aria-label="Smazat účtenku {{ s.puvodni_nazev }}">×</button>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </article>
+  {% endif %}
+
+  {# 2. Cteni pres AI. Dokud neni co cist, blok je uspany. #}
+  {% if muze_psat %}
+  <article {% if not neprectene %}class="uspane"{% endif %}>
+    <h3>2. Načíst údaje</h3>
+
+    {% with kam = '/akce/' ~ akce.id ~ '/skeny' %}
+      {% include "prepinac_tarifu.html" %}
+    {% endwith %}
+
+    {% if neprectene %}
+      <p>{{ neprectene|length|mnozne('účtenka čeká', 'účtenky čekají', 'účtenek čeká') }}
+         na načtení.</p>
+      <form method="post" action="/akce/{{ akce.id }}/skeny/precist"
+            data-cekani="Čtu účtenky — jedna trvá 5–15 s, nezavírej stránku…">
+        <button type="submit" class="zlute">
+          Načíst údaje z {{ [neprectene|length, davka]|min|mnozne('účtenky', 'účtenek', 'účtenek') }}
+        </button>
+      </form>
+    {% else %}
+      <p>{% if nepovedene %}Zbývají jen účtenky, které se nepovedlo přečíst.{% elif skeny %}Všechny účtenky jsou načtené.{% else %}Nejdřív nahraj účtenky v bloku 1.{% endif %}</p>
+      <button type="button" aria-disabled="true">Načíst údaje</button>
+    {% endif %}
+
+    {# Co se tri razy nepovedlo, z davky vypadlo. Misto pokracovani
+       dokola dostane clovek na vyber: vyplnit rucne, nahrat lepsi fotku, nebo
+       cteni zkusit znovu - pocitadlo se tim jen vynuluje, nic se neplati. #}
+    {% if nepovedene %}
+      <ul class="seznam-souboru">
+        {% for s in nepovedene %}
+          <li>
+            <span title="{{ s.puvodni_nazev }}">{{ s.puvodni_nazev }}</span>
+            <small>Nepodařilo se přečíst ani na třetí pokus — vyplň ručně nebo nahraj lepší fotku.</small>
+            <button type="submit" form="znovu_cteni_{{ s.id }}" class="outline drobne">Zkusit znovu</button>
+          </li>
+        {% endfor %}
+      </ul>
+      {% for s in nepovedene %}
+        <form method="post" action="/sken/{{ s.id }}/cteni/znovu" id="znovu_cteni_{{ s.id }}"
+              data-cekani="Čtu účtenku — trvá to pár vteřin, nezavírej stránku…"></form>
+      {% endfor %}
+    {% endif %}
+    <small>
+      Čte se po {{ davka }} a jen na tvoje kliknutí{% if tarif == 'zdarma' %} — kvůli limitům
+      bezplatného tarifu Google AI Studio{% endif %}. Jedna účtenka trvá zhruba 5–15 sekund,
+      takže stránka chvíli přemýšlí.
+    </small>
+  </article>
+  {% endif %}
+
+  {# 3. Prehled. #}
+  <article>
+    <h3>3. Přehled</h3>
+    {% if skeny %}
+      <p class="velke">{{ statistika.castka|koruny }}</p>
+      <table class="souhrn">
+        <tbody>
+          {% for r in statistika.kategorie %}
+            <tr>
+              <td>{{ r.nazev }}</td>
+              <td class="cislo"><small>{{ r.pocet }}×</small></td>
+              <td class="cislo">{{ r.soucet|koruny }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {# Odznacek prepocitava `js/tabulky.js` pri kazdem zaskrtnuti v tabulce dole -
+         proto sem posilam i vsechny tri tvary mnozneho cisla. Sklonovani je
+         text, a texty patri do sablony. #}
+      {% set zbyva = statistika.celkem - statistika.zkontrolovano %}
+      {% set tvary = ['nezkontrolovaná účtenka', 'nezkontrolované účtenky',
+                      'nezkontrolovaných účtenek'] %}
+      <p>
+        <span data-pocitadlo class="stitek {{ 'chyba-stitek' if zbyva else 'ok' }}"
+              data-jedna="{{ tvary[0] }}" data-dve="{{ tvary[1] }}" data-pet="{{ tvary[2] }}"
+              data-hotovo="Vše zkontrolováno">
+          {%- if zbyva %}{{ zbyva|mnozne(tvary[0], tvary[1], tvary[2]) }}
+          {%- else %}Vše zkontrolováno{% endif -%}
+        </span>
+      </p>
+      <small>
+        <span data-pocet-ok>{{ statistika.zkontrolovano }}</span>
+        z {{ statistika.celkem }} zkontrolováno.
+        {% if statistika.prilohy %}<br>{{ statistika.prilohy|mnozne('příloha se nepočítá', 'přílohy se nepočítají', 'příloh se nepočítá') }} do součtu.{% endif %}
+        {% if statistika.bez_castky %}<br><mark>{{ statistika.bez_castky|mnozne('účtenka nemá', 'účtenky nemají', 'účtenek nemá') }} částku.</mark>{% endif %}
+        {% if statistika.rozpad_nesedi %}<br><mark>{{ statistika.rozpad_nesedi|mnozne('účtenka má', 'účtenky mají', 'účtenek má') }} rozdělení, které nesedí s částkou.</mark>{% endif %}
+      </small>
+    {% else %}
+      <p>Zatím tu nejsou žádné účtenky.</p>
+    {% endif %}
+  </article>
+
+</div>
+
+{% if skeny %}
+{% if not kategorie %}
+  <article class="oznameni pozor">Číselník kategorií je prázdný —
+    {% if uzivatel.je_spravce %}<a href="/kategorie">založ kategorie</a>{% else %}požádej správce, aby je založil{% endif %},
+    jinak účtenky nepůjde roztřídit.</article>
+{% endif %}
+{# Na telefonu je z kazde uctenky kratky radek (nahled, nazev, castka) a klepnuti otevre
+   okno s ostatnimi policky (js/okno.js, K-223). Policka zustavaji v tomhle formulari, takze
+   se ukladaji prubezne jako v tabulce; na pocitaci se okno nepouziva. Kratka bunka je
+   v radku POSLEDNI: js/lupa.js bere popisky poli z `radek.children` podle poradi sloupcu. #}
+<form method="post" action="/akce/{{ akce.id }}/skeny/ulozit" data-prubezne
+      data-okno-seznam data-okno-nadpis="Upravit účtenku">
+  <div class="siroka-tabulka">
+  <table class="husta okno-tabulka okno-s-nahledem">
+    <thead>
+      <tr>
+        <th>Náhled</th>
+        <th>Název (jde do Excelu i do ZIPu)</th>
+        <th>Obchodník</th>
+        <th>Datum</th>
+        <th class="cislo">Částka</th>
+        <th class="cislo">Kč/l</th>
+        <th>Kategorie</th>
+        <th>Kdo platil</th>
+        <th>Příloha</th>
+        <th>OK</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in skeny %}
+      {% set pop = s.nazev or s.puvodni_nazev %}
+      <tr class="{% if s.jistota == 'nizka' %}nizka-jistota{% elif s.jistota is none %}neprecteno{% endif %}
+                 {% if not s.zkontrolovano %}nezkontrolovano{% endif %}"
+          data-okno-radek data-sken="{{ s.id }}" data-stranky="{{ s.pocet_stranek }}"
+          data-soubor="{{ s.puvodni_nazev }}" data-otisk="{{ s.otisk }}">
+        <td class="okno-nahled">
+          {# Bez JavaScriptu odkaz otevre puvodni soubor v nove zalozce; s JS ho
+             prevezme lupa a otevre kontrolni rezim pres celou obrazovku. #}
+          <a href="/sken/{{ s.id }}/soubor" target="_blank" class="nahled-odkaz" data-lupa
+             title="{{ s.puvodni_nazev }} — otevřít přes celou obrazovku">
+            <img src="/sken/{{ s.id }}/nahled?v={{ s.otisk }}" alt="Náhled účtenky {{ pop }}" class="nahled"
+                 loading="lazy" decoding="async">
+            <span class="nahled-lupa" aria-hidden="true">⛶</span>
+          </a>
+          {% if s.pocet_stranek > 1 %}<small>{{ s.pocet_stranek }} str.</small>{% endif %}
+        </td>
+        <td data-okno-pole="Název">
+          <input type="text" name="nazev_{{ s.id }}" value="{{ s.nazev or '' }}"
+                 aria-label="Název — {{ pop }}" {{ pole_zamcena }}>
+          {% if s.jistota %}<small class="jistota-{{ s.jistota }}">jistota: {{ s.jistota }}</small>{% endif %}
+          {% if s.poznamka %}<small class="poznamka">{{ s.poznamka }}</small>{% endif %}
+          {% if s.stranky_archu %}
+            <details>
+              <summary><small>rozpis po stránkách</small></summary>
+              <small>
+                {% for p in s.stranky_archu %}
+                  str. {{ p.strana }}: {{ p.pocet_kusu }} ks × {{ p.cena_za_kus }} = {{ p.mezisoucet }}<br>
+                {% endfor %}
+              </small>
+            </details>
+          {% endif %}
+        </td>
+        <td data-okno-pole="Obchodník"><input type="text" name="obchodnik_{{ s.id }}" value="{{ s.obchodnik or '' }}"
+                   aria-label="Obchodník — {{ pop }}" {{ pole_zamcena }}></td>
+        <td data-okno-pole="Datum">
+          <input type="date" name="datum_{{ s.id }}" aria-label="Datum — {{ pop }}"
+                 value="{{ s.datum.isoformat() if s.datum else '' }}" {{ pole_zamcena }}>
+          {% set v = varovani[s.id] %}
+          {% if v %}
+            {# Zluta / oranzova / cervena podle toho, jak daleko je uctenka od terminu
+               akce. Ztisene varovani zustava videt, jen prestane kricet. #}
+            <span class="stitek varovani-data {{ v.stupen }}{% if s.varovani_ztiseno %} ztisene{% endif %}"
+                  title="{{ v.popis }}">
+              <span class="varovani-text">{{ v.znacka }}</span>
+              {% if not akce_uzavrena %}
+              <button type="submit" form="ztisit_{{ s.id }}" class="zvonek"
+                      title="{% if s.varovani_ztiseno %}{{ v.popis }} Zase upozorňovat.{% else %}{{ v.popis }} Ztišit — vím o tom, účtenka je v pořádku.{% endif %}"
+                      aria-label="Ztišit upozornění na datum — {{ pop }}"
+                      aria-pressed="{{ 'true' if s.varovani_ztiseno else 'false' }}">{% if s.varovani_ztiseno %}🔕{% else %}🔔{% endif %}</button>
+              {% endif %}
+            </span>
+          {% endif %}
+        </td>
+        <td data-okno-pole="Částka"><input type="text" name="castka_{{ s.id }}" class="cislo"
+                   aria-label="Částka — {{ pop }}"
+                   value="{{ s.castka if s.castka is not none else '' }}" {{ pole_zamcena }}></td>
+        <td data-okno-pole="Cena za litr (Kč/l)"><input type="text" name="litr_{{ s.id }}" class="cislo"
+                   aria-label="Cena za litr — {{ pop }}"
+                   value="{{ s.cena_za_litr if s.cena_za_litr is not none else '' }}" {{ pole_zamcena }}></td>
+        <td data-okno-pole="Kategorie">
+          <select name="kategorie_{{ s.id }}" aria-label="Kategorie — {{ pop }}" {{ pole_zamcena }}>
+            <option value="">—</option>
+            {% for k in kategorie %}
+              <option value="{{ k.id }}" {% if s.kategorie_id == k.id %}selected{% endif %}>{{ k.nazev }}</option>
+            {% endfor %}
+          </select>
+          {# Rozdeleni uctenky, na ktere je vic kategorii - treba nakup jidla,
+             na kterem je i toaletni papir. Vypisujeme o dva radky vic, nez ma
+             uctenka casti: formular se uklada prubezne a stranka se pritom
+             neprekresluje, takze volne misto na pridani tu musi byt predem. #}
+          {# Rozpis je jeden celek: data-skupina posle prohlizeci vsechny jeho policka,
+             kdyz se zmeni kterekoli (js/prubezne.js). #}
+          {% set volnych = 2 %}
+          <details class="rozdeleni" {% if s.je_rozdelena %}open{% endif %}>
+            <summary><small>rozdělit podle kategorií</small></summary>
+            <table class="rozdeleni-radky">
+              {% for i in range(s.casti|length + volnych) %}
+                {% set c = s.casti[i] if i < s.casti|length else none %}
+                <tr {% if not c %}data-prazdny{% endif %}>
+                  <td>
+                    <select name="cast_{{ s.id }}_{{ i }}_kategorie" data-skupina="cast_{{ s.id }}"
+                            aria-label="Kategorie části {{ i + 1 }} — {{ pop }}" {{ pole_zamcena }}>
+                      <option value="">—</option>
+                      {% for k in kategorie %}
+                        <option value="{{ k.id }}" {% if c and c.kategorie_id == k.id %}selected{% endif %}>{{ k.nazev }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td><input type="text" class="cislo" name="cast_{{ s.id }}_{{ i }}_castka"
+                             data-skupina="cast_{{ s.id }}" placeholder="částka"
+                             aria-label="Částka části {{ i + 1 }} — {{ pop }}"
+                             value="{{ c.castka if c and c.castka is not none else '' }}" {{ pole_zamcena }}></td>
+                  <td><input type="text" name="cast_{{ s.id }}_{{ i }}_popis" data-skupina="cast_{{ s.id }}"
+                             placeholder="co to bylo"
+                             aria-label="Popis části {{ i + 1 }} — {{ pop }}"
+                             value="{{ c.popis if c and c.popis else '' }}" {{ pole_zamcena }}></td>
+                </tr>
+              {% endfor %}
+            </table>
+            <small>
+              {% if s.je_rozdelena and not s.rozdeleni_sedi %}
+                <mark>Součet částí je {{ s.soucet_casti|koruny }}, účtenka má {{ s.castka|koruny if s.castka is not none else '—' }}.</mark>
+              {% else %}
+                Části musí dát dohromady částku účtenky. Prázdná částka řádek smaže.
+              {% endif %}
+            </small>
+          </details>
+        </td>
+        <td data-okno-pole="Kdo platil">
+          <select name="kdo_{{ s.id }}" aria-label="Kdo platil — {{ pop }}" {{ pole_zamcena }}>
+            <option value="">—</option>
+            {% for c in lide %}
+              <option value="{{ c.id }}" {% if s.clovek_id == c.id %}selected{% endif %}>{{ c.jmeno }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td class="stred" data-okno-pole="Příloha">
+          <input type="checkbox" class="priloha-zaskrtavatko" name="priloha_{{ s.id }}"
+                 title="Příloha — nemá vlastní řádek v Excelu"
+                 aria-label="Příloha — {{ pop }}"
+                 {% if s.je_priloha %}checked{% endif %} {{ pole_zamcena }}>
+          {# Ke kteremu dokladu priloha patri. Nabizeji se jen uctenky s vlastnim
+             radkem - priloha na priloze by byla kruh bez dokladu. Plny vyber ma
+             jen radek, ktery prilohou uz je; ostatni maji prazdny a moznosti si
+             pri zaskrtnuti vezmou z jedine <template id="moznosti-priloh"> pod
+             tabulkou (js/tabulky.js). Jinak by se seznam opakoval v kazdem radku
+             a HTML rostlo s druhou mocninou poctu uctenek. Bez JavaScriptu
+             se vyber ukaze po ulozeni, s nim hned po zaskrtnuti. #}
+          <select name="priloha_k_{{ s.id }}" class="priloha-k"
+                  title="Ke kterému dokladu příloha patří"
+                  aria-label="Ke kterému dokladu příloha patří — {{ pop }}"
+                  {% if not s.je_priloha %}hidden{% endif %} {{ pole_zamcena }}>
+            <option value="">— patří k… —</option>
+            {% if s.je_priloha %}
+              {% for c in skeny if not c.je_priloha and c.id != s.id %}
+                {{ moznost_prilohy(c, s.priloha_k_id) }}
+              {%- endfor %}
+            {% endif %}
+          </select>
+        </td>
+        <td class="stred" data-okno-pole="Zkontrolováno">
+          <input type="checkbox" class="ok-zaskrtavatko" name="ok_{{ s.id }}"
+                 title="{% if s.zkontrolovano %}Zkontrolováno{% else %}Zatím nezkontrolováno{% endif %}"
+                 aria-label="Zkontrolováno — {{ pop }}"
+                 {% if s.zkontrolovano %}checked{% endif %} {{ pole_zamcena }}>
+        </td>
+        <td data-okno-akce>
+          {# V okne na telefonu misto krizku stoji text (.okno-krizek / .okno-text). #}
+          {% if not akce_uzavrena %}
+          <button type="submit" form="smazat_{{ s.id }}" class="kontrast-chyba drobne"
+                  title="Smazat účtenku" aria-label="Smazat účtenku {{ pop }}"><span class="okno-krizek">×</span><span class="okno-text">Smazat účtenku</span></button>
+          {% endif %}
+        </td>
+        <td class="okno-kratky">
+          <button type="button" class="okno-otevrit" aria-haspopup="dialog">
+            <span class="okno-nazev" data-zrcadlo="nazev_{{ s.id }}"
+                  data-prazdne="{{ s.puvodni_nazev }}">{{ pop }}</span>
+            <span class="okno-hodnota" data-zrcadlo="castka_{{ s.id }}" data-format="koruny"
+                  data-prazdne="—">{{ s.castka|koruny if s.castka is not none else '—' }}</span>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {# Moznosti vyberu "patri k..." pro vsechny radky, ktere zatim prilohou nejsou. #}
+  <template id="moznosti-priloh">
+    {%- for c in skeny if not c.je_priloha %}
+      {{ moznost_prilohy(c, none) }}
+    {%- endfor %}
+  </template>
+  {% if not akce_uzavrena %}<button type="submit" data-bez-js>Uložit všechny řádky</button>{% endif %}
+</form>
+
+{% if not akce_uzavrena %}
+{% for s in skeny %}
+  <form method="post" action="/sken/{{ s.id }}/smazat" id="smazat_{{ s.id }}"
+        data-potvrdit="Smazat účtenku „{{ s.nazev or s.puvodni_nazev }}“? Zmizí i její sken — z Účtenek, ze složky i z exportů. Vrátit to nejde."></form>
+  <form method="post" action="/sken/{{ s.id }}/ztisit" id="ztisit_{{ s.id }}"></form>
+{% endfor %}
+{% endif %}
+
+<article>
+  <small>
+    <strong>Příloha</strong> je sken, který v Excelu nemá vlastní řádek a nepočítá se do součtu —
+    typicky účtenka za benzín u cesťáku, která jen dokládá cenu za litr. V ZIPu ve složce ale je.
+    Palivové účtenky si aplikace označí jako přílohu sama.
+    V tabulce má příloha modrou sponku, zkontrolovaná účtenka zelenou fajfku.
+    <br>
+    U přílohy vyber <strong>ke kterému dokladu patří</strong> — třeba benzín k cesťáku.
+    Na vytištěném dokladu se pak pod tou účtenkou objeví řádek „příloha: …“, ale do
+    částky se dál nepočítá. Příloha se přitom přesune do složky svého dokladu, aby
+    byla ve stejné přihrádce jako papír, na který se lepí.
+    <br>
+    Klikni na náhled a účtenka se otevře přes celou obrazovku vedle toho, co z ní přečetla AI.
+    Tam ji <strong>Enter</strong> označí jako zkontrolovanou a rovnou přeskočí na další.
+  </small>
+</article>
+
+{# ---- Lupa: kontrola uctenky pres celou obrazovku ----
+   Vlevo dve tretiny sken, vpravo tretina udaje, ktere z nej precetla AI.
+   Policka v panelu nemaji `name` - jsou to jen ovladatelne kopie policek
+   z tabulky, ktera je zdrojem pravdy a sama se prubezne uklada. Proto lupa
+   stoji AZ ZA formularem, ne v nem. #}
+<dialog class="lupa" aria-label="Kontrola účtenky" tabindex="-1">
+  <div class="lupa-mrizka">
+
+    <div class="lupa-sken">
+      <button type="button" class="ikona lupa-sipka lupa-drive"
+              title="Předchozí účtenka (šipka vlevo)" aria-label="Předchozí účtenka">←</button>
+      <img class="lupa-obrazek" src="" alt="Účtenka přes celou obrazovku">
+      {# Text "Nacitam..." / "Nahled se nepodarilo nacist" - plni ho js/lupa.js. #}
+      <p class="lupa-stav" role="status" hidden></p>
+      <button type="button" class="ikona lupa-sipka lupa-pozdeji"
+              title="Další účtenka (šipka vpravo)" aria-label="Další účtenka">→</button>
+      {# Priblizeni skenu: jen tady, nikdy ne celou stranku. Totez umi
+         kolecko mysi, Ctrl+kolecko, stisknuti dvou prstu, +/-/0 a dvojklik. #}
+      <div class="lupa-zoom" role="toolbar" aria-label="Přiblížení účtenky">
+        <button type="button" class="drobne outline lupa-oddalit"
+                title="Oddálit (−)" aria-label="Oddálit účtenku">−</button>
+        <button type="button" class="drobne outline lupa-puvodni"
+                title="Celá účtenka (0 nebo dvojklik)" aria-label="Celá účtenka">100 %</button>
+        <button type="button" class="drobne outline lupa-priblizit"
+                title="Přiblížit (+ nebo kolečko myši)" aria-label="Přiblížit účtenku">+</button>
+      </div>
+      <div class="lupa-stranky" hidden>
+        <button type="button" class="drobne outline lupa-strana-zpet"
+                aria-label="Předchozí stránka">←</button>
+        <span class="lupa-strana-popis"></span>
+        <button type="button" class="drobne outline lupa-strana-vpred"
+                aria-label="Další stránka">→</button>
+      </div>
+      {# Jen telefon v rezimu "cela obrazovka" (panel s krizkem je tam schovany, K-237). #}
+      <button type="button" class="ikona lupa-zavrit-cela"
+              title="Zavřít" aria-label="Zavřít lupu">×</button>
+    </div>
+
+    <aside class="lupa-panel">
+      <div class="lupa-hlavicka">
+        <div>
+          <strong class="lupa-nazev"></strong>
+          <small class="lupa-pozice"></small>
+        </div>
+        <button type="button" class="ikona duch lupa-zavrit"
+                title="Zavřít (Esc)" aria-label="Zavřít">×</button>
+      </div>
+
+      {# Roluje se jen tahle cast - prepinace v paticce musi zustat videt. #}
+      <div class="lupa-obsah">
+        <div class="lupa-pole"></div>
+        <div class="lupa-poznamky"></div>
+      </div>
+
+      <div class="lupa-paticka">
+        <button type="button" class="lupa-prepinac lupa-priloha" aria-pressed="false"></button>
+        <button type="button" class="lupa-prepinac lupa-ok" aria-pressed="false"></button>
+        <a class="lupa-original" href="#" target="_blank"><small>Otevřít původní soubor</small></a>
+        <small class="lupa-napoveda">
+          <strong>Enter</strong> označí a přejde na další · <strong>šipky</strong> listují ·
+          <strong>kolečko</strong> nebo <strong>+ / −</strong> přibližují (tažením se posouvá) ·
+          <strong>Esc</strong> zavírá
+        </small>
+      </div>
+    </aside>
+
+  </div>
+</dialog>
+{% endif %}
+{% endblock %}

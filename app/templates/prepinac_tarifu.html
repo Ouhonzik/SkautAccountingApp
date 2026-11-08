@@ -1,0 +1,35 @@
+{# Prepinac klice ke Gemini, spolecny pro vsechna mista, kde se cte pres AI
+   (Uctenky, Obdarovani). Ukaze se jen tehdy, kdyz je v .env vyplneny i placeny
+   klic - viz `app/services/tarif.py`. Vybrany klic je plny, ten druhy obrysovy.
+
+   Vyber plati pro celou aplikaci a drzi ho prihlasovaci cookie: co se prepne
+   tady, plati i na druhe obrazovce a po odhlaseni padne zpatky na bezplatny.
+
+   Na serveru se cte vzdycky placenym klicem, prepinac se neukazuje
+   a zustane jen stitek, ze cteni stoji penize.
+
+   Ceka: `akce`, `tarif`, `placeny_klic` a `kam` (adresa, kam se po prepnuti
+   vratit - bez ni by prepnuti z Obdarovanych skoncilo v Uctenkach). #}
+{% if placeny_klic %}
+  <form method="post" action="/akce/{{ akce.id }}/skeny/tarif" class="prepinac-tarifu">
+    <input type="hidden" name="kam" value="{{ kam }}">
+    <span><small>Klíč:</small></span>
+    <button type="submit" name="tarif" value="zdarma" class="drobne
+            {{- ' secondary' if tarif == 'zdarma' else ' duch' }}"
+            aria-pressed="{{ 'true' if tarif == 'zdarma' else 'false' }}"
+            title="Bezplatný tarif Google AI Studio — zdarma, ale po malých dávkách">
+      Zdarma
+    </button>
+    <button type="submit" name="tarif" value="placeny" class="drobne
+            {{- ' secondary' if tarif == 'placeny' else ' duch' }}"
+            aria-pressed="{{ 'true' if tarif == 'placeny' else 'false' }}"
+            title="Placený klíč — čtení stojí peníze, zato jde po větších dávkách">
+      Placený
+    </button>
+    {% if tarif == 'placeny' %}
+      <span class="stitek pozor">Čtení stojí peníze</span>
+    {% endif %}
+  </form>
+{% elif tarif == 'placeny' %}
+  <span class="stitek pozor">Čtení stojí peníze</span>
+{% endif %}

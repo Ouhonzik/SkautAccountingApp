@@ -1,0 +1,4378 @@
+/* Vzhled podle Kormorani design systemu, postaveny nad Pico.css.
+   Misto aby prepisoval Pico od zakladu, meni jeho promenne (--pico-*) na
+   barvy/tvary/pisma z design systemu - Pico si tak drzi svoje chovani
+   (formulare, tabulky, accordion) a jen dostane novy kabat. */
+
+/* ---- Pisma z design systemu (licencovana, viz .gitignore) ----
+   WOFF2 je o polovinu mensi nez OTF, ale taky neni v gitu - vyrabi se z OTF
+   na kazdem pocitaci zvlast (README.md, "Pisma"). Pro prohlizec je OTF zaloha: kdyz
+   WOFF2 chybi (404), vezme dalsi zdroj v `src`, takze appka jede i bez nej. */
+@font-face {
+  font-family: "SKAUT";
+  src:
+    url("fonts/SKAUT-Bold.woff2") format("woff2"),
+    url("fonts/SKAUT-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "TheMix C5";
+  src:
+    url("fonts/TheMixC5-SemiLight.woff2") format("woff2"),
+    url("fonts/TheMixC5-SemiLight.otf") format("opentype");
+  font-weight: 350;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ---- Barvy Kormorani ---- */
+  --kormorani-blue: #2A4983;
+  --kormorani-blue-tmava: #1F386A;
+  --kormorani-blue-svetla: #3E63A8;
+  --kormorani-yellow: #FAB202;
+  --kormorani-yellow-tmava: #E29D00;
+  /* Zelena je treti barva znacky - pouziva se stridmo, pro potvrzeni a kladna
+     cisla. Kdyby byla vsude, prestala by neco znamenat. */
+  --kormorani-green: #008836;
+  --kormorani-green-tmava: #006B2A;
+  --calm-sky: #BDD4DF;
+  --blue-050: #EEF3FA;
+  --grey-050: #F4F6F8;
+  --grey-100: #E7EBEF;
+  --grey-200: #D6DCE3;
+  --grey-400: #93A0AE;
+  --grey-600: #5D6B7A;
+  --grey-800: #2E3742;
+  --red-050: #FDECEC;
+  --red-600: #C42525;
+  --green-050: #E8F4EC;
+  --green-100: #C8E6D4;
+
+  /* Pozadi je v cele aplikaci stejne - stredne tmava modr. Svetle sklo na ni
+     drzi tvar a je poznat, ze je pruhledne. */
+  --surface-page: #26406E;
+  --surface-card: #FFFFFF;
+  --text-heading: var(--kormorani-blue);
+  --text-body: #25313F;
+  /* Tlumena a nejtlumenejsi barva textu. Jsou tmavsi, nez by clovek cekal:
+     text lezi na SKLE, kterym prosvita tmave pozadi, takze skutecny podklad
+     pod pismenky je vzdycky o kus tmavsi nez cisty papir. Puvodni sedive
+     (#5D6B7A a #93A0AE) na nem mely kontrast kolem 3:1 a spatne se cetly. */
+  --text-muted: #414F5C;
+  --text-subtle: #56646F;
+
+  /* ---- Barvy vyznamu ve dvou verzich ------------------------------------
+     Plna barva (--kormorani-green, --status-danger) je urcena na VYPLNE:
+     tlacitka, tecky, proužky. Na TEXT je moc svetla - zelena #008836 ma na
+     skle kontrast jen 2,6:1. Pro text proto existuje tmavsi dvojce; vyznam
+     zustava stejny, jen se da precist. */
+  --zelena-text: #005E26;
+  --cervena-text: #9E1C1C;
+  --oranzova-text: #7A4000;
+  --zluta-text: #5E4200;
+  --border-subtle: rgba(42, 73, 131, .10);
+  --border-default: rgba(42, 73, 131, .18);
+  --border-strong: rgba(42, 73, 131, .34);
+  --focus-ring: rgba(250, 178, 2, .55);
+  /* Okraj ovladaciho prvku na skle: proti vyplni policka I proti sklu
+     okolo ma mit aspon 3 : 1, a to na NEJTMAVSIM miste pozadi (WCAG 1.4.11).
+     Puvodnich .18 dalo 1,2 : 1, .82 jen 2,9 : 1 - hodnotu hlida
+     automaticky test, ktery kontrast spocita z techto promennych. */
+  --border-policko: rgba(42, 73, 131, .90);
+  /* Totez pro prazdna zaskrtavatka se stavovou barvou: cervena u neza-
+     kontrolovaneho OK a modra u Prilohy jsou tmavsi dvojce --status-danger
+     (2,1 : 1 proti sklu) a --status-info (2,3 : 1); vyznam barvy zustava. */
+  --border-policko-ok: #8A1414;
+  /* Chyba u pole formulare: text i obrys. Tmavsi nez --cervena-text, ktera ma
+     na nejtmavsim skle (160, 184, 222) jen 3,9 : 1; tahle 4,7 : 1 (text chce 4,5). */
+  --chyba-pole: #8A1414;
+  --border-policko-priloha: #004E88;
+  /* Fokus z klavesnice: modry kruh + bily lem. Kdyz kruh lezi na svetlem
+     skle, bily lem nevadi; kdyz na tmavem pozadi stranky, bily lem ho oddeli. */
+  --focus-obrys: var(--kormorani-blue);
+  --focus-lem: #fff;
+
+  --status-danger: #E53434;
+  --status-danger-hover: var(--red-600);
+  --status-warning: #EE8027;
+  --status-success: var(--kormorani-green);
+  --status-info: #007BC2;
+
+  /* ---- Pisma ---- */
+  --font-display: "SKAUT", "Open Sans", system-ui, sans-serif;
+  --font-body: "TheMix C5", "Open Sans", system-ui, sans-serif;
+
+  /* ---- Vzduch mezi vecmi ------------------------------------------------
+     Jedna stupnice pro celou aplikaci, at se mezery neodhaduji od oka. Kdyz
+     ma neco pusobit vzdusneji, meni se tahle stupnice - ne jednotlive
+     predpisy dole v souboru. Cisla v zavorce plati pri zakladu 16 px
+     (viz --pico-font-size nize). */
+  --mezera-xs: .35rem;    /*  6 px - mezi dvema radky tehoz udaje */
+  --mezera-sm: .6rem;     /* 10 px - mezi tlacitky v rade */
+  --mezera-md: 1rem;      /* 16 px - uvnitr bloku */
+  --mezera-lg: 1.5rem;    /* 24 px - vnitrni odsazeni karet, mrizky */
+  --mezera-xl: 2rem;      /* 32 px - MEZI SEKCEMI, zakladni "vzduch" */
+  --mezera-2xl: 2.5rem;   /* 40 px - pod hlavickou stranky */
+  --mezera-3xl: 3.25rem;  /* 52 px - nad nadpisem nove sekce */
+
+  /* ---- Pismo v tabulkach ------------------------------------------------
+     Zamerne mensi nez bezny text. Tabulka je husta mrizka cisel a pri
+     velikosti bezneho odstavce z ni je stena textu. Vzduch se do tabulky
+     vraci vyssimi radky (padding v bunkach), ne vetsim pismem. */
+  --pismo-tabulka: .8rem;        /* ~13 px */
+  --pismo-tabulka-mala: .75rem;  /* vysvetlivky pod nazvem */
+  /* Nejmensi pismo na obrazovce. Pico zmensuje `small`, `code` a spol.
+     v `em` z pisma rodice, takze se v tabulce zmensi podruhe (z 12,8 px na 10).
+     Proto maji `max(..., var(--pismo-nejmensi))`. Vyjimka: tiskopisy (tisknou
+     se na papir, ne na obrazovku). */
+  --pismo-nejmensi: .75rem;      /* 12 px */
+
+  /* ---- Zaobleni: "neostre rohy a zaoblene tvary" (manual 7.1) ---- */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --radius-pill: 999px;
+
+  /* ---- Stiny: modre, difuzni, nikdy sede/ostre ---- */
+  --shadow-sm: 0 2px 8px rgba(20, 42, 80, .07);
+  --shadow-md: 0 8px 24px -6px rgba(20, 42, 80, .13);
+  --shadow-lg: 0 20px 48px -12px rgba(20, 42, 80, .20);
+
+  /* ---- Sklo (liquid glass) ----------------------------------------------
+     Sklenena deska se sklada ze ctyr veci a zadna z nich nesmi chybet, jinak
+     z toho je jen bily obdelnik se stinem:
+
+       1. VYPLN  - dve pruhledne vrstvy pres sebe. Spodni je domodra tint,
+                   horni je prechod (odlesk), ktery je nahore svetlejsi nez
+                   uprostred. Dohromady propousteji zhruba tretinu toho, co
+                   lezi pod nimi - dost na to, aby bylo videt barevne pozadi,
+                   a zaroven tak malo, aby tmavy text uvnitr zustal citelny
+                   i nad nejtmavsim mistem pozadi.
+       2. ROZOSTRENI pozadi pod sklem (`backdrop-filter`). `saturate` barvy pod
+                   sklem zesili, `brightness` je nadzvedne - bez toho by sklo
+                   nad tmavym pozadim zeslo do sedive.
+       3. LEM     - vlasova linka po obvodu, nahore nejsvetlejsi a dolu slabsi.
+                   Tohle je to, co oku rekne "tohle je hrana skla": svetlo
+                   dopada shora, takze horni hrana sviti a spodni uz ne.
+       4. STIN    - mekky, modry a posunuty dolu, aby deska nad pozadim levitovala.
+
+     Vsechny ctyri se sazi najednou v sekci "Sklenene nadoby" nize. */
+  --sklo-tint: rgba(226, 237, 252, .68);
+  --sklo-tint-hover: rgba(238, 246, 254, .76);
+  --sklo-odlesk: linear-gradient(157deg,
+      rgba(255, 255, 255, .50) 0%,
+      rgba(255, 255, 255, .15) 46%,
+      rgba(255, 255, 255, .32) 100%);
+  /* `brightness` nadzvedne tmave pozadi pod sklem. Je to zaroven pojistka na
+     citelnost: cim vic pozadi prosvita, tim vic musi byt nadzvednute, aby na
+     nem tmavy text porad drzel kontrast. Kdyz snizis tint, zvedni tohle. */
+  --sklo-blur: blur(22px) saturate(195%) brightness(1.40);
+  --sklo-blur-silne: blur(34px) saturate(200%);
+  --sklo-lem:
+    /* Hrana: nahore nejsvetlejsi, po stranach slabsi, dole uz jen naznak. */
+    inset 0 1px 0 rgba(255, 255, 255, .98),
+    inset 1px 0 0 rgba(255, 255, 255, .54),
+    inset -1px 0 0 rgba(255, 255, 255, .36),
+    inset 0 -1px 0 rgba(255, 255, 255, .42),
+    inset 0 0 0 1px rgba(255, 255, 255, .22),
+    /* Mekky vnitrni odlesk hned pod horni hranou - diky nemu vypada deska
+       silna, jako opravdove sklo, ne jako nalepena folie. */
+    inset 0 3px 8px -3px rgba(255, 255, 255, .70),
+    inset 0 -10px 20px -14px rgba(255, 255, 255, .45),
+    /* Vlasova modra linka navic - bily lem by se nad svetlou skvrnou pozadi
+       ztratil a deska by nemela obrys. */
+    0 0 0 1px rgba(42, 73, 131, .11);
+  --sklo-stin:
+    0 20px 44px -18px rgba(8, 20, 46, .55),
+    0 3px 10px -4px rgba(8, 20, 46, .28);
+  --sklo-stin-vyssi:
+    0 34px 62px -20px rgba(8, 20, 46, .60),
+    0 5px 14px -5px rgba(8, 20, 46, .32);
+
+  /* Tmave sklo - jen prihlasovaci panel. Svetlo se do nej opira stejne, jen
+     lem musi byt slabsi, aby na tmavem podkladu nekricel. */
+  --sklo-tmave-tint: rgba(30, 52, 98, .38);
+  --sklo-tmave-odlesk: linear-gradient(157deg,
+      rgba(255, 255, 255, .20) 0%,
+      rgba(255, 255, 255, .04) 46%,
+      rgba(255, 255, 255, .10) 100%);
+  --sklo-tmave-lem:
+    inset 0 1px 0 rgba(255, 255, 255, .40),
+    inset 1px 0 0 rgba(255, 255, 255, .18),
+    inset -1px 0 0 rgba(255, 255, 255, .12),
+    inset 0 -1px 0 rgba(255, 255, 255, .14),
+    inset 0 0 0 1px rgba(255, 255, 255, .10);
+
+  /* Pouzita jmena pro sklo mimo desky: tlacitka, policka, plochy uvnitr karet. */
+  --glass-strong: rgba(255, 255, 255, .88);
+  --glass-light: rgba(255, 255, 255, .52);
+  --glass-tinted-hover: var(--sklo-tint-hover);
+  --glass-border: rgba(255, 255, 255, .58);
+  --glass-backdrop: var(--sklo-blur);
+  --glass-backdrop-silne: var(--sklo-blur-silne);
+  --glass-fill: var(--glass-strong);
+  --glass-fill-karta: var(--sklo-tint);
+  --glass-fill-karta-hover: var(--sklo-tint-hover);
+}
+
+/* ---- Napojeni na promenne Pico.css ----
+   Pozor na selektor: Pico sve svetle barvy definuje jako
+   `:root:not([data-theme=dark]),[data-theme=light]`. To je silnejsi zapis nez
+   prosty `:root`, takze by prohlizec dal prednost Picu a nase barvy by se
+   vubec neprojevily. Musime se trefit do stejne sily. */
+:root:not([data-theme=dark]) {
+  --pico-font-family: var(--font-body);
+  --pico-font-family-sans-serif: var(--font-body);
+  --pico-background-color: var(--surface-page);
+  --pico-color: var(--text-body);
+  --pico-h1-color: var(--text-heading);
+  --pico-h2-color: var(--text-heading);
+  --pico-h3-color: var(--text-heading);
+  --pico-h4-color: var(--text-heading);
+  --pico-h5-color: var(--text-heading);
+  --pico-h6-color: var(--text-heading);
+  --pico-muted-color: var(--text-muted);
+  --pico-muted-border-color: var(--border-subtle);
+  --pico-border-radius: var(--radius-md);
+
+  /* Pico zvetsuje zaklad pisma podle sirky okna az na 131 % - na sirokem
+     monitoru udela z 16 px rovnou 21 px. Protoze je v tomhle souboru
+     vsechno v `rem`, nafoukne se s nim i kazde tlacitko, kazda ikona a
+     kazda mezera. Text je pak velky, ale mezery mezi bloky vypadaji stejne
+     jako driv - a aplikace pusobi sevrene. Drzime proto pevnych 100 %:
+     1rem = 16 px na kazde obrazovce a velikosti napsane niz znamenaji
+     presne to, co je u nich v komentari. */
+  --pico-font-size: 100%;
+  /* Vic mista mezi radky a pod odstavci. Tuhle promennou Pico dava odstavcum,
+     seznamum, nadpisum i tabulkam, takze se text provzdusni najednou. */
+  --pico-line-height: 1.65;
+  --pico-typography-spacing-vertical: 1.25rem;
+  /* Vnitrni odsazeni karet (`<article>`). Vetsi, nez Pico dava samo - kolem
+     obsahu karty ma byt videt vzduch, ne jen lem. */
+  --pico-block-spacing-vertical: var(--mezera-lg);
+  --pico-block-spacing-horizontal: 1.75rem;
+
+  --pico-primary: var(--kormorani-blue);
+  --pico-primary-background: var(--kormorani-blue);
+  --pico-primary-border: var(--kormorani-blue);
+  --pico-primary-underline: var(--kormorani-blue);
+  --pico-primary-hover: var(--kormorani-blue-tmava);
+  --pico-primary-hover-background: var(--kormorani-blue-tmava);
+  --pico-primary-hover-border: var(--kormorani-blue-tmava);
+  --pico-primary-hover-underline: var(--kormorani-blue-tmava);
+  --pico-primary-focus: var(--focus-ring);
+  --pico-primary-inverse: #FFFFFF;
+
+  --pico-secondary: var(--grey-600);
+  --pico-secondary-background: var(--grey-050);
+  --pico-secondary-border: var(--border-default);
+  --pico-secondary-underline: var(--grey-600);
+  --pico-secondary-hover: var(--grey-800);
+  --pico-secondary-hover-background: var(--grey-100);
+  --pico-secondary-hover-border: var(--border-strong);
+  --pico-secondary-hover-underline: var(--grey-800);
+  --pico-secondary-focus: var(--focus-ring);
+  --pico-secondary-inverse: var(--text-heading);
+
+  --pico-card-background-color: var(--surface-card);
+  --pico-card-border-color: var(--border-subtle);
+  --pico-card-box-shadow: var(--shadow-sm);
+  --pico-card-sectioning-background-color: var(--surface-card);
+
+  --pico-form-element-background-color: rgba(255, 255, 255, .78);
+  --pico-form-element-border-color: var(--border-policko);
+  --pico-form-element-color: var(--text-body);
+  --pico-form-element-placeholder-color: var(--text-subtle);
+  --pico-form-element-active-border-color: var(--kormorani-blue);
+  --pico-form-element-focus-color: var(--focus-ring);
+  --pico-form-element-selected-background-color: var(--blue-050);
+
+  --pico-table-border-color: var(--border-subtle);
+  --pico-table-row-stripped-background-color: var(--grey-050);
+
+  --pico-mark-background-color: var(--kormorani-yellow);
+  --pico-mark-color: var(--kormorani-blue);
+
+  --pico-code-background-color: var(--grey-050);
+  --pico-code-color: var(--grey-800);
+
+  --pico-blockquote-border-color: var(--border-default);
+  --pico-accordion-border-color: var(--border-subtle);
+  --pico-accordion-active-summary-color: var(--kormorani-blue);
+  --pico-accordion-close-summary-color: var(--text-body);
+  --pico-accordion-open-summary-color: var(--kormorani-blue);
+  --pico-dropdown-border-color: var(--border-default);
+  --pico-dropdown-box-shadow: var(--shadow-md);
+  --pico-text-selection-color: rgba(250, 178, 2, .45);
+}
+
+/* ---- Zakladni typografie ---- */
+/* Vetsi radkovani je urcene textu, ktery se cte. Policka a tlacitka si ho ale
+   od Pica berou ze stejne promenne a jen by se tim vytahla do vysky - proto
+   se jim vraci sevrenejsi hodnota. */
+input, select, textarea, button, [role="button"] { line-height: 1.4; }
+small, code, kbd, output { font-size: max(.875em, var(--pismo-nejmensi)); }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .01em;
+}
+mark {
+  border-radius: var(--radius-pill);
+  padding: .1rem .6rem;
+}
+
+/* ---- Barevne skvrny pod sklem ----
+   Sklo je videt jen tehdy, kdyz je pod nim co rozostrit. Cim vyraznejsi skvrny,
+   tim vic je poznat, ze jde o sklo a ne o bily obdelnik. `fixed` drzi skvrny na
+   miste pri rolovani - stranka pak klouze pod tabuli, misto aby se posouvala i
+   s natrenym pozadim. */
+body {
+  background-color: var(--surface-page);
+  background-image:
+    radial-gradient(46rem 34rem at 4% -6%, rgba(62, 99, 168, .82), transparent 62%),
+    radial-gradient(34rem 30rem at 96% 6%, rgba(0, 136, 54, .34), transparent 60%),
+    radial-gradient(42rem 34rem at 84% 78%, rgba(250, 178, 2, .26), transparent 58%),
+    radial-gradient(30rem 26rem at 10% 92%, rgba(189, 212, 223, .26), transparent 60%),
+    radial-gradient(38rem 30rem at 46% 44%, rgba(16, 30, 58, .32), transparent 66%);
+  background-attachment: fixed;
+  /* Bez toho by pozadi koncilo tam, kde konci obsah, a pod nim by zustal
+     jednolity pruh - <html> ma svoji vlastni barvu, takze se skvrny "nerozlejou"
+     samy pres celou obrazovku. */
+  min-height: 100vh;
+}
+
+/* ---- Barva textu: svetla na pozadi, tmava na skle ----
+   Pozadi je tmave, sklo svetle. Nejdriv tedy prohlasime za svetly vsechen text
+   ve strance a hned nato ho uvnitr sklenenych nadob vratime na tmavy. Vyjmenovat
+   naopak "co lezi primo na pozadi" by neslo - nadpis sekce byva schovany
+   v <form> nebo <div> a takovy vycet by se rozpadl pri kazde zmene sablony. */
+/* Meni se rovnou Pico promenna --pico-color: Pico ji nastavuje odstavcum,
+   seznamum, popiskum i bunkam tabulky napevno, takze pouhe dedeni barvy z
+   <main> by tyhle prvky minulo. */
+main.container { --pico-color: rgba(255, 255, 255, .86); color: rgba(255, 255, 255, .86); }
+main.container :is(h1, h2, h3) {
+  color: #fff;
+  /* Jemny stin drzi nadpis citelny i tam, kde pod nim lezi svetla skvrna. */
+  text-shadow: 0 1px 14px rgba(12, 24, 48, .45);
+}
+/* Pico dava podnadpisu v <hgroup> tlumenou sedou - ta je na tmavem pozadi
+   necitelna, potrebuje svetlou variantu. */
+main.container hgroup > p { color: rgba(255, 255, 255, .88); }
+/* Zelena i cervena musi byt na tmavem pozadi vyrazne svetlejsi, jinak splynou.
+   Nestaci "trochu svetlejsi odstin" - pozadi ma na nekterych mistech svetlou
+   skvrnu a stredne sytá zelen by se na ni ztratila. */
+main.container hgroup .kladne { color: #B0F2CD; }
+main.container hgroup .zaporne { color: #FFDADA; }
+
+/* Sklenene nadoby - uvnitr nich plati puvodni tmave barvy. */
+main.container :is(article, table, details.slozka-karta, .dlazdice-karta,
+                   .lupa-panel, .galerie-lista, .vozidlo-blok, aside.zasobnik,
+                   .knm-prihlaseni-panel) {
+  --pico-color: var(--text-body);
+  color: var(--text-body);
+}
+main.container :is(article, table, details.slozka-karta, .dlazdice-karta,
+                   aside.zasobnik) :is(h1, h2, h3, h4) {
+  color: var(--text-heading);
+  text-shadow: none;
+}
+/* Prihlasovaci panel je jedina tmava karta - text v nem zustava bily. */
+main.container .knm-prihlaseni-panel { --pico-color: #fff; color: #fff; }
+
+main.container {
+  max-width: 78rem;
+  padding-inline: 3rem;
+  padding-block: var(--mezera-lg) 6rem;
+}
+header.container {
+  /* Stejna sirka jako obsah - Pico jinak dava kontejnerum sve vlastni maximum
+     podle breakpointu a hlavicka by na strednich sirkach byla uzsi nez stranka. */
+  max-width: 78rem;
+  padding-inline: 3rem;
+}
+@media (max-width: 48rem) {
+  main.container, header.container { padding-inline: 1.25rem; }
+}
+/* Telefon: vodorovny okraj mezi hranou obrazovky a sklenenym blokem je jedna
+   sdilena promenna `--okraj-telefon`; 20 px (jako na tabletu) pusobilo na telefonu
+   namackane. Meni se jen tady, vsechny stranky ji dedi pres `main.container` a
+   `header.container`; novy blok na strance ji nema prepisovat, ale pouzit (kdyz
+   potrebuje vlastni vnejsi okraj, pocita s ni). Tablet (768 px) a pocitac beze zmeny.
+   Na nejuzsich telefonech (do 360 px) zustava 20 px, ať obsah nema malo mista. */
+:root { --okraj-telefon: 1.5rem; }
+/* Vnitrni vodorovne odsazeni obsahu skleneneho bloku na telefonu (Z8, kolo 2): text a
+   tlacitka v radcich a kartach (kniha, jizdy, prehled akci, seznam cestaku...) nesmi
+   sedet u hrany skla. Pouziva se jen v blocich pro telefon; novy radek ci karta ho ma
+   pouzit, ne psat vlastni cislo. Na pocitaci a tabletu se nepouziva. */
+:root { --vnitrni-okraj-telefon: 1rem; }
+@media (max-width: 37.5rem) {
+  main.container, header.container { padding-inline: var(--okraj-telefon); }
+}
+@media (max-width: 22.5rem) {
+  :root { --okraj-telefon: 1.25rem; }
+  /* Vnitrni odsazeni se zuzuje taky: s 16 px by se v kartach jizd na 320 px oriznuly
+     popisky a ceny (misto zustane jen 248 px). 12 px je spodni mez. */
+  :root { --vnitrni-okraj-telefon: .75rem; }
+}
+
+/* Vzduch mezi bloky. Nadpis patri k tomu, co je pod nim, proto ma velkou
+   mezeru nad sebou a malou pod sebou. Cely rytmus stranky stoji na stupnici
+   --mezera-* nahore; kdyz ma byt stranka vzdusnejsi, meni se ta. */
+article { margin-bottom: var(--mezera-xl); }
+h2 { margin-top: var(--mezera-3xl); margin-bottom: var(--mezera-md); }
+hgroup + h2, hgroup + * > h2 { margin-top: var(--mezera-lg); }
+hgroup { margin-bottom: var(--mezera-2xl); }
+
+/* ---- Sklenene nadoby -----------------------------------------------------
+   Jeden jediny predpis pro vsechno, co je ze skla: karty, tabulky, hlavicka,
+   dlazdice na rozcestniku, sbalitelne slozky. Kdyz pribude novy blok, staci
+   ho pripsat do tohohle seznamu - nekopiruj vypln, lem a stin zvlast, jinak
+   se casem rozejdou a kazdy blok bude vypadat trochu jinak. */
+article,
+table,
+.appbar,
+.dlazdice-karta,
+.lupa-panel,
+.galerie-lista,
+.vozidlo-blok,
+aside.zasobnik,
+details.slozka-karta {
+  border: none;
+  border-radius: var(--radius-lg);
+  background-color: var(--sklo-tint);
+  background-image: var(--sklo-odlesk);
+  backdrop-filter: var(--sklo-blur);
+  -webkit-backdrop-filter: var(--sklo-blur);
+  box-shadow: var(--sklo-lem), var(--sklo-stin);
+}
+
+/* Sklo na skle uz neni sklo - dve pruhledne vrstvy pres sebe daji dohromady
+   bily papir a spodni deska ztrati tvar. Tabulka uvnitr karty proto sklo
+   nedostava a nese jen svoje linky. */
+/* Totez plati pro tabulku v tabulce (rozpis uctenky po kategoriich): kdyby
+   mela vlastni sklo, byla by uvnitr bily pas se stinem a policka v nem by
+   mela jine okoli nez vsechna ostatni. */
+:is(article, details.slozka-karta, aside.zasobnik, table) table {
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+/* ---- Tlacitka ----
+   Vsechna jsou tobolky (pill). Plna maji modry prechod a difuzni modry stin,
+   svetla jsou ze skla. Zadne tlacitko nema sedy ani ostry stin - sedy stin
+   pusobi spinave a v design systemu neni. */
+button,
+[type="submit"],
+[type="button"],
+[role="button"] {
+  border-radius: var(--radius-pill);
+  min-height: 2.4rem;           /* ~38 px - mysi staci a v rade tlacitek je klid */
+  padding-block: .4rem;
+  font-size: .92rem;
+  font-weight: 600;
+  letter-spacing: .005em;
+  /* Prechod nejde dat do `background-color`, tak se navrstvi jako obrazek
+     pres barvu, kterou tlacitku dalo Pico. */
+  background-image: linear-gradient(168deg, var(--kormorani-blue-svetla), var(--kormorani-blue) 62%);
+  box-shadow:
+    0 10px 20px -8px rgba(20, 42, 80, .48),
+    inset 0 1px 0 rgba(255, 255, 255, .26);
+  transition: transform .14s ease, box-shadow .14s ease, background-color .14s ease;
+}
+button:hover,
+[type="submit"]:hover,
+[type="button"]:hover,
+[role="button"]:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 28px -10px rgba(20, 42, 80, .52),
+    inset 0 1px 0 rgba(255, 255, 255, .34);
+}
+button:active,
+[type="submit"]:active,
+[role="button"]:active { transform: translateY(0); }
+/* Fokus z klavesnice - JEDINE pravidlo pro tlacitka, odkazy, shrnuti a
+   zaskrtavatka. Zluty kruh s 55% krytim mel na skle kontrast 1,06 : 1.
+   `:root` navic zvedne silu pravidla nad Pico (`details summary:focus-visible`).
+   Pocet vrstev: 2 px mezera (bily lem), 3 px modry kruh, 2 px bily lem. */
+:root :is(a, button, [role="button"], summary, .dlazdice-karta,
+          input[type="checkbox"], input[type="radio"], input[type="file"]):focus-visible {
+  outline: 3px solid var(--focus-obrys);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 7px var(--focus-lem);
+}
+/* Textova policka: od nove tmavsiho obrysu (--border-policko) by se fokus
+   poznal jen podle tenkeho prebarveni okraje a zlute zari od Pica (1,3 : 1).
+   Modry kruh je pozna dobre, a protoze policka v tabulkach lezi tesne vedle
+   sebe, bez bileho lemu. */
+:root :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"]),
+          select, textarea):focus-visible {
+  outline: 2px solid var(--focus-obrys);
+  outline-offset: 1px;
+}
+
+/* Na dotykovem displeji se tlacitka vraci na 44 px. Mensi cil se prstem
+   trefuje spatne - na mysi je to naopak zbytecne velka placka. */
+@media (pointer: coarse) {
+  button:not(.drobne),
+  [type="submit"]:not(.drobne),
+  [type="button"]:not(.drobne),
+  [role="button"]:not(.drobne) { min-height: 2.75rem; }
+  /* `:not(.drobne)` tu neni na vyber, ale kvuli sile pravidla: predpis
+     `button.ikona` nize v souboru je stejne silny a je pozdeji, takze by
+     tenhle prebil. */
+  button.ikona:not(.drobne),
+  [role="button"].ikona:not(.drobne) { width: 2.75rem; min-width: 2.75rem; }
+}
+
+/* Svetla tlacitka jsou ze skla - modry prechod by je prebarvil, proto se rusi. */
+button.secondary,
+[role="button"].secondary,
+button.outline,
+[role="button"].outline,
+button.duch,
+[role="button"].duch {
+  background-image: none;
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  color: var(--text-heading);
+  box-shadow:
+    0 6px 16px -6px rgba(20, 42, 80, .26),
+    inset 0 1px 0 rgba(255, 255, 255, .78);
+}
+button.secondary,
+[role="button"].secondary {
+  background-color: var(--glass-strong);
+  border-color: var(--glass-border);
+}
+button.secondary:hover,
+[role="button"].secondary:hover { background-color: rgba(255, 255, 255, .95); }
+
+/* Obrys: jen linka a text, vypln je sklo. Pro druhorade akce vedle plneho. */
+button.outline,
+[role="button"].outline {
+  background-color: var(--glass-light);
+  border-color: var(--border-strong);
+}
+button.outline:hover,
+[role="button"].outline:hover {
+  background-color: var(--glass-tinted-hover);
+  border-color: var(--kormorani-blue);
+}
+
+/* Duch: uplne bez ramu a stinu, pro ustupove akce typu Zpet. */
+button.duch,
+[role="button"].duch {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+button.duch:hover,
+[role="button"].duch:hover {
+  background-color: var(--glass-tinted-hover);
+  box-shadow: none;
+  transform: none;
+}
+/* Duch nema vlastni pozadi, takze prebira to, na cem lezi. Uvnitr skla je
+   tmavy popisek spravne; primo na tmavem pozadi stranky by ale zmizel. */
+main.container > .duch,
+main.container > * > .duch,
+main.container > .tlacitka > .duch {
+  color: #fff;
+}
+main.container :is(article, table, details.slozka-karta, .dlazdice-karta) .duch {
+  color: var(--text-heading);
+}
+
+/* Zluta je barva hlavni akce stranky - na jedne obrazovce vzdy jen jedna. */
+button.zlute,
+[role="button"].zlute,
+[type="submit"].zlute {
+  background-color: var(--kormorani-yellow);
+  border-color: var(--kormorani-yellow);
+  color: var(--kormorani-blue);
+  background-image: linear-gradient(168deg, #FFC637, var(--kormorani-yellow) 62%);
+  box-shadow:
+    0 10px 20px -8px rgba(196, 138, 0, .50),
+    inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+button.zlute:hover,
+[role="button"].zlute:hover {
+  background-color: var(--kormorani-yellow-tmava);
+  border-color: var(--kormorani-yellow-tmava);
+  box-shadow:
+    0 16px 28px -10px rgba(196, 138, 0, .55),
+    inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+
+/* Zelena potvrzuje, ze je neco hotove - proto ji nesou dokoncujici akce. */
+button.zelene,
+[role="button"].zelene {
+  background-color: var(--kormorani-green);
+  border-color: var(--kormorani-green);
+  color: #fff;
+  /* Prechod jde od znackove zelene k tmavsi. Puvodni svetly vrsek #14A247
+     mel s bilym popiskem jen 3,3:1 - popisek na nem zesvetlal a zmizel. */
+  background-image: linear-gradient(168deg, var(--kormorani-green), var(--kormorani-green-tmava) 70%);
+  box-shadow:
+    0 10px 20px -8px rgba(0, 92, 36, .45),
+    inset 0 1px 0 rgba(255, 255, 255, .26);
+}
+button.zelene:hover,
+[role="button"].zelene:hover {
+  background-color: var(--kormorani-green-tmava);
+  border-color: var(--kormorani-green-tmava);
+}
+
+/* ---- Velikosti ---- */
+button.drobne,
+[role="button"].drobne {
+  min-height: 1.35rem;
+  padding: .1rem .55rem;
+  margin-bottom: 0;
+  font-size: .75rem;
+  width: auto;
+  box-shadow: 0 4px 10px -4px rgba(20, 42, 80, .3), inset 0 1px 0 rgba(255, 255, 255, .6);
+}
+button.drobne:hover,
+[role="button"].drobne:hover {
+  box-shadow: 0 8px 16px -6px rgba(20, 42, 80, .34), inset 0 1px 0 rgba(255, 255, 255, .7);
+}
+button.velke-tlacitko,
+[role="button"].velke-tlacitko {
+  min-height: 3rem;
+  padding-inline: 2rem;
+  font-size: 1.02rem;
+}
+
+/* Kulate tlacitko pro samotnou ikonu (sipka zpet, plus, sdileni). */
+button.ikona,
+[role="button"].ikona {
+  width: 2.4rem;
+  min-width: 2.4rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  line-height: 1;
+}
+
+button:disabled,
+button[aria-disabled="true"],
+[role="button"][aria-disabled="true"] {
+  box-shadow: none;
+  transform: none;
+  background-image: none;
+  background-color: var(--calm-sky);
+  border-color: var(--calm-sky);
+  /* Plna tmava barva, ne prusvitna. Vypnute tlacitko porad nese popisek
+     ("Nacist udaje") a clovek potrebuje vedet, co je vypnute. */
+  color: #31445F;
+}
+/* Tlacitko po odeslani formulare (js/spolecne.js, sekce 12): vypnute a s tocicim
+   kolecken. Pico kresli kolecko bile (pro barevna tlacitka); na svetle sede
+   vypnute tlacitko by nebylo videt. */
+button[aria-busy="true"]:disabled::before {
+  filter: none;
+}
+img.nahled {
+  border-radius: var(--radius-sm);
+}
+/* ---- Hlavicka aplikace (AppBar) ---- */
+header.container {
+  padding-top: 1rem;
+}
+.appbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mezera-md);
+  padding: .7rem 1.25rem;
+}
+.appbar-znacka {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  text-decoration: none;
+}
+.appbar-znacka img {
+  height: 2rem;
+  width: auto;
+}
+/* Pozor: hlavicka je ze SVETLEHO skla, takze v ni patri TMAVY text. Drive tu
+   byl bily - na svetlem skle se skoro ztracel a nazev aplikace nesel precist. */
+.appbar-znacka strong {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  color: var(--text-heading);
+  font-size: 1.05rem;
+  letter-spacing: .01em;
+}
+.appbar nav ul {
+  gap: .4rem;
+  /* Pico dava `nav ul` `display: flex` bez zalamovani - osm polozek menu
+     spravce se na telefonu nevejde a bez zalomeni preteka z obrazovky na obe
+     strany. */
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.appbar nav a {
+  text-decoration: none;
+  padding: .35rem .9rem;
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+}
+.appbar nav a:hover {
+  background: rgba(255, 255, 255, .70);
+  color: var(--text-heading);
+}
+/* "Odhlasit" je tlacitko (POST), ale v liste ma vypadat jako ostatni odkazy. */
+.appbar nav form.odhlaseni {
+  margin: 0;
+}
+.appbar nav form.odhlaseni button {
+  margin: 0;
+  width: auto;
+  padding: .35rem .9rem;
+  border-radius: var(--radius-pill);
+  font-size: inherit;
+  font-weight: inherit;
+  color: var(--text-muted);
+}
+.appbar nav form.odhlaseni button:hover {
+  background: rgba(255, 255, 255, .70);
+  color: var(--text-heading);
+}
+/* ---- Nabidka v hlavicce: radek odkazu (pocitac) / rozbalovaci (telefon) ----
+   Odkazy jsou v <details class="nabidka">. Na pocitaci je <details>
+   jen neviditelny obal: tlacitko "Nabidka" se schova a odkazy zustanou v radku
+   jako driv (obal otevre js/spolecne.js; `::details-content` je totez bez JS
+   v prohlizecich, ktere ho znaji). Na telefonu je zavreny a odkazy rozklikne
+   tlacitko - nativne, tedy i klavesnici (Enter, mezernik) a ctecka ho zna.
+   Pico dava <details> okraj, odsazeni a vlastni sipku; tady nic z toho nechceme. */
+.appbar nav details.nabidka {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.appbar nav details.nabidka > summary { display: none; }
+@media not all and (max-width: 37.5rem) {
+  .appbar nav details.nabidka::details-content {
+    content-visibility: visible;
+    display: contents;
+  }
+}
+/* Hranice 37,5 rem je i v js/spolecne.js (matchMedia) - mente obe misto. */
+@media (max-width: 37.5rem) {
+  /* Tlacitko "Nabidka" lezi vpravo na vysce znacky a nezabira radek: zavrena
+     nabidka je tedy jen znacka. Po otevreni se odkazy poskladaji pod ni. */
+  .appbar { position: relative; flex-wrap: wrap; row-gap: 0; }
+  .appbar-znacka strong { white-space: nowrap; font-size: .95rem; }
+  .appbar nav { width: 100%; }
+  .appbar nav details.nabidka { width: 100%; }
+  .appbar nav details.nabidka > summary {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    position: absolute;
+    top: .3rem;
+    right: 1.25rem;
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    border: 1px solid var(--border-policko);
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, .55);
+    color: var(--text-heading);
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+  }
+  /* Pico sem dava sipku; misto ni je tu "hamburger" bez cteni (alt text za lomitkem). */
+  .appbar nav details.nabidka > summary::after { display: none; }
+  .appbar nav details.nabidka > summary::before { content: "\2630" / ""; }
+  .appbar nav details.nabidka[open] > summary { background: rgba(255, 255, 255, .85); }
+  .appbar nav ul {
+    flex-direction: column;
+    align-items: stretch;
+    margin: .8rem 0 0;
+    gap: 0;
+  }
+  .appbar nav li { padding: 0; border-top: 1px solid rgba(42, 73, 131, .18); }
+  .appbar nav li:first-child { border-top: none; }
+  .appbar nav li a,
+  .appbar nav form.odhlaseni button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 2.75rem;
+    margin: 0;
+    padding: .35rem .9rem;
+    border: none;
+    text-align: left;
+    justify-content: flex-start;
+  }
+  /* Odkaz na profil a stitek "jen cteni" (revizor) jsou jeden radek. */
+  .appbar nav li:has(.stitek) { display: flex; align-items: center; padding-right: .9rem; }
+  .appbar nav li:has(.stitek) a { width: auto; flex: 1 1 auto; }
+}
+/* Nejuzsi telefony (320 px): znacka a tlacitko by se jinak prekryvaly. */
+@media (max-width: 22.5rem) {
+  .appbar { padding-inline: .8rem; }
+  .appbar-znacka strong { font-size: .8rem; }
+  .appbar nav details.nabidka > summary { right: .8rem; padding: 0 .7rem; }
+}
+
+/* ---- Hlasky (Alert) ---- */
+.oznameni {
+  padding: 1rem 1.4rem;
+  margin-bottom: var(--mezera-lg);
+  /* Zaobleni si hlaska nese sama: v aplikaci je to <article> (a to uz sklo ma),
+     ale na prihlaseni je to obycejny <p>, ktery by zustal hranaty. */
+  border-radius: var(--radius-lg);
+  border: none;
+  border-left: 4px solid var(--kormorani-green);
+  background-color: rgba(232, 244, 236, .80);
+  color: var(--text-body);
+}
+.oznameni.chyba {
+  border-left-color: var(--status-danger);
+  background-color: rgba(253, 236, 236, .82);
+}
+/* Zluta = pozor, ne chyba. Pouziva se treba na prepnuti cteni uctenek na
+   placeny klic: nic se nerozbilo, jen to od ted stoji penize. */
+.oznameni.pozor {
+  border-left-color: var(--status-warning);
+  background-color: rgba(254, 244, 219, .85);
+}
+
+/* ---- Sbalitelny blok (<details>) ----
+   Pico dava nadpisu sbaleneho bloku napevno tmavou barvu. Kdyz blok lezi primo
+   na tmavem pozadi (Smazat akci, Smazat cely seznam), byl tmavy na tmavem a
+   nedal se precist.
+
+   Barva se musi nastavit az tady, na samotnem `summary`. Prepsat v `:root`
+   promennou `--pico-accordion-close-summary-color: var(--pico-color)` NEJDE:
+   promenna se dosadi uz na `:root`, kde je `--pico-color` tmava, a dolu se
+   dedi hotova tmava barva. Az tady, primo na prvku, se `var(--pico-color)`
+   ridi tim, jestli je blok na pozadi (svetla) nebo ve skle (tmava). */
+main.container summary:not([role]) { color: var(--pico-color); }
+main.container details[open] > summary:not([role]) { color: var(--pico-color); }
+
+/* Sipka u sbalitelneho bloku. Pico ji kresli obrazkem s pevnou tmavou barvou,
+   takze na tmavem pozadi zmizi - `brightness(0) invert(1)` z ni udela bilou.
+   Uvnitr skla se nechava tak, jak je: tam je tmava spravne. */
+main.container > details > summary::after,
+main.container > form > details > summary::after {
+  filter: brightness(0) invert(1);
+  opacity: .85;
+}
+
+/* ---- Drobecky (kde jsem) ---- */
+nav.drobecky {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  /* Pico dava kazdemu <nav> space-between - drobecky by se rozlezly po sirce. */
+  justify-content: flex-start;
+  gap: .4rem;
+  margin-bottom: var(--mezera-lg);
+  font-size: .9rem;
+  color: rgba(255, 255, 255, .86);
+}
+nav.drobecky a {
+  text-decoration: none;
+  color: rgba(255, 255, 255, .86);
+  border-radius: var(--radius-pill);
+  padding: .15rem .5rem;
+}
+nav.drobecky a:hover {
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+}
+nav.drobecky > * + *::before {
+  content: "›";
+  margin-right: .4rem;
+  color: rgba(255, 255, 255, .62);
+}
+nav.drobecky [aria-current="page"] {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ---- formulare vedle sebe ---- */
+.radek {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.radek > label { flex: 1; margin-bottom: 0; }
+/* Policko Z/Do s naseptavacem mist (cesťák, app/static/cestak_mapa.js): label a seznam
+   nabidek jsou sourozenci, proto obal misto <label> kolem policka. */
+.radek > .pole-mista { flex: 2; position: relative; }
+.radek > .pole-mista > label {
+  display: flex; align-items: center; gap: .45rem; line-height: 1.5;
+  margin-bottom: calc(var(--pico-spacing) * .375);
+}
+/* Seznam nabidek presahuje pres tabulku jizd pod radkem. Karta ma kvuli sklu vlastni
+   vrstvu (backdrop-filter), takze z-index seznamu uvnitr nestaci - nad tabulku se
+   musi zvednout cela karta, dokud se v ni pise. */
+article.pridavani:focus-within { position: relative; z-index: 10; }
+.radek > .pole-mista > input { margin-bottom: 0; }
+/* Bod, ktery nastavi dalsi klik do mapy, ma zlute oramovani - stejna zluta
+   jako hlavni akce, tady "sem to pujde". */
+.pole-mista.aktivni > input {
+  border-color: var(--kormorani-yellow);
+  box-shadow: 0 0 0 .2rem rgba(250, 178, 2, .35);
+}
+/* Pico dava kazdemu policku spodni mezeru. V radku by kvuli ni tlacitko
+   (zarovnane na spodni hranu) skoncilo niz nez policka vedle nej. */
+.radek > label > input,
+.radek > label > select,
+.radek > input,
+.radek > select { margin-bottom: 0; }
+/* Pico dava vysku jen polim <input>; nabidka <select> ma vysku podle obsahu, takze
+   vedle policek stoji o par pixelu nizsi a jeji popisek o to nize. Stejny vzorec jako
+   u <input> (viz `input:not([type=checkbox]...)` v Picu) je vyrovna. */
+.radek > label > select,
+.radek > select {
+  height: calc(1rem * var(--pico-line-height) + var(--pico-form-element-spacing-vertical) * 2 + var(--pico-border-width) * 2);
+}
+/* Text pod polem (chyba, napoveda) ma od Pica zaporny horni odstup -12px, protoze
+   Pico pocita s mezerou pod polem. Tady jsme ji vyse zrusili, takze by text zacal
+   nad spodni hranou pole a obrys by skrtal jeho prvni radek. Vracime mu maly odstup. */
+.radek > label > :is(input, select, textarea) + small { margin-top: .25rem; }
+.radek > button,
+.radek > [role="button"],
+.radek button[type="submit"] {
+  margin-bottom: 0;
+  width: auto;
+}
+/* Tabulka prijmu: jmeno z ciselniku se ve vyberu nesmi orezat ("Jana Novákov"). */
+.prijmy-tabulka select { min-width: 11rem; }
+/* Na uzkem displeji dostane kazde policko svuj radek. Peti prvkum vedle sebe
+   zbyde na mobilu 70-80 px na kus a misto vzdusneho radku je z toho rada
+   utrzku. Sirka se vynucuje pres `min-width`, ne pres `flex`: pomer sirek si
+   sablony nastavuji primo v `style="flex:3"` a inline zapis by kazdou
+   `flex` vlastnost odsud prebil. */
+@media (max-width: 34rem) {
+  .radek > label,
+  .radek > .pole-mista { min-width: 100%; }
+}
+
+/* ---- tabulky ---- */
+.siroka-tabulka { overflow-x: auto; }
+
+/* Pismo v tabulce je mensi nez v textu (viz --pismo-tabulka nahore), zato jsou
+   radky vyssi. Tabulka tak zustane kompaktni - vejde se do ni stejne udaju -
+   ale prestane pusobit jako stena cisel. */
+table { font-size: var(--pismo-tabulka); }
+table td,
+table th { padding: .75rem 1rem; }
+
+/* Tabulky jsou na vetsine obrazovek hlavni plocha, takze jsou taky ze skla
+   (predpis vyse). Zaobleni rohu se dela pres rohove bunky - `overflow: hidden`
+   na <table> neoreze. */
+/* Pico natira kazdou bunku barvou pozadi stranky. Ta je tmava, takze by prekryla
+   sklo pod tabulkou - bunky musi byt pruhledne a barvu si urcuje tabulka sama. */
+table td,
+table th { background-color: transparent; }
+table thead th {
+  background: rgba(203, 219, 243, .62);
+  color: var(--text-heading);
+  font-weight: 600;
+}
+table thead th:first-child { border-top-left-radius: var(--radius-lg); }
+table thead th:last-child { border-top-right-radius: var(--radius-lg); }
+table tbody tr:last-child td:first-child { border-bottom-left-radius: var(--radius-lg); }
+table tbody tr:last-child td:last-child { border-bottom-right-radius: var(--radius-lg); }
+table tbody tr:last-child td { border-bottom: none; }
+table tbody tr:hover {
+  background: rgba(255, 255, 255, .55);
+}
+
+/* Zarovnani na horni hranu, ne na stred. U radku, kde ma nazev pod sebou
+   jeste jistotu a poznamku od AI, je bunka vysoka - pri zarovnani na stred by
+   policka vedle ni sjela nekam doprostred a s nazvem uz by neladila. */
+table.husta td,
+table.husta th { padding: .7rem .6rem; vertical-align: top; }
+table.husta td > input,
+table.husta td > select { margin-top: 0; }
+table.husta input,
+table.husta select {
+  margin-bottom: 0;
+  padding: .3rem .45rem;
+  font-size: var(--pismo-tabulka);
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+/* Vysvetlivky pod nazvem uctenky (jistota od AI, poznamka, rozpis po strankach).
+   Bez vlastni mezery se lepily rovnou na spodni hranu policka - text vypadal,
+   ze do nej zasahuje - a v huste tabulce byly zbytecne velke.
+   Zamerne se tu NEnastavuje `display`: `small.jistota-vysoka` je schovana a
+   silnejsi zapis by ji zase odkryl. */
+table.husta td > small,
+table.husta td > details {
+  margin-top: var(--mezera-xs);
+  font-size: var(--pismo-tabulka-mala);
+  line-height: 1.55;
+}
+table.husta td > small + small { margin-top: .2rem; }
+
+/* ---- Uzivatele: kazdy ucet je jeden nizky radek ----
+   Jmeno, e-mail a role zustavaji pole primo v radku, jen bez velkych okraju; vse
+   ostatni (stav, pozvanka, cinnost, cteni AI, tlacitka) je text nebo drobne tlacitko
+   na jedne radce. Bunky se nelamou (`nowrap`) - kdyz se tabulka na uzsim okne
+   nevejde, posouva se v `.siroka-tabulka`. Na telefonu bunky schova `js/okno.js`
+   a pravidla `.okno-aktivni` vyse maji vetsi silu nez tato. */
+table.uzivatele-tabulka td,
+table.uzivatele-tabulka th {
+  padding: .3rem .3rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+/* Hlavicka se smi zalomit ("Posledni prihlaseni"), at tabulku nerozsiruje nadpis nad kratkym udajem. */
+table.uzivatele-tabulka th { white-space: normal; }
+table.uzivatele-tabulka input,
+table.uzivatele-tabulka select {
+  margin: 0;
+  padding-block: .15rem;
+  padding-inline-start: .45rem;
+  height: auto;
+  font-size: var(--pismo-tabulka);
+  border-radius: var(--radius-sm);
+}
+table.uzivatele-tabulka td.uzivatel-jmeno input { width: 7rem; }
+table.uzivatele-tabulka td.uzivatel-email input { width: 8.5rem; }
+/* Nejdelsi nazev role se do uzke bunky nevejde celý (Chrome ho v <select> zkrati). */
+table.uzivatele-tabulka select { width: 7rem; text-overflow: ellipsis; }
+table.uzivatele-tabulka td.uzivatel-akce button + button { margin-left: .25rem; }
+table.uzivatele-tabulka button.drobne { padding-inline: .45rem; }
+table.uzivatele-tabulka td .stitek { margin-right: .2rem; }
+
+/* Okno Limity (js/limity.js): <dialog> mimo hlavni formular, panel je <article> (sklo z predpisu vyse).
+   Pozadi je tmave jako u okna radku na telefonu, aby okno nad oknem radku neslo do svetla. */
+dialog.okno-limity {
+  background-color: rgba(12, 24, 48, .5);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+dialog.okno-limity > article {
+  display: flex;
+  flex-direction: column;
+  width: min(26rem, 90vw);
+  max-width: none;
+  max-height: 90dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+dialog.okno-limity form { display: flex; flex-direction: column; min-height: 0; margin: 0; }
+html:has(dialog.okno-limity[open]) { overflow: hidden; }
+.limity-hlavicka {
+  padding: 1rem 1.25rem .75rem;
+  border-bottom: var(--pico-border-width) solid var(--pico-muted-border-color);
+}
+.limity-hlavicka h3 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+.limity-hlavicka small { color: var(--text-muted); overflow-wrap: anywhere; }
+.limity-telo { overflow-y: auto; padding: 1rem 1.25rem .5rem; }
+.limity-vyuziti { margin: 0 0 1rem; font-size: .9rem; }
+.limity-telo label { margin-bottom: .9rem; font-weight: 600; font-size: .9rem; }
+.limity-telo input[type="range"] { margin: .4rem 0 0; }
+.limity-telo > small { display: block; color: var(--text-muted); }
+.limity-paticka { display: flex; flex-wrap: wrap; gap: .5rem; padding: .5rem 1.25rem 1.25rem; }
+.limity-paticka button { width: auto; flex: 1 1 auto; margin: 0; }
+@media (max-width: 37.5rem) {
+  .limity-paticka button { min-height: 2.75rem; }
+}
+
+/* ---- Zaskrtavatka (Priloha, OK) ----
+   Kolecko zhruba velikosti krizku na konci radku, at radek nema tri ruzne
+   tvary ovladacich prvku. Zaskrtnute je zelene: zelena v teto aplikaci znamena
+   "v poradku / hotovo" a presne to zaskrtnuti rika.
+
+   Musi to stat AZ ZA pravidlem `table.husta input` vys. To dava vsem polickum
+   v huste tabulce padding a mensi zaobleni a zaskrtavatko kvuli nemu vypadalo
+   jako siroky bily oval (21x15 px), ne jako zaskrtavatko. Obe pravidla maji
+   stejnou silu, takze rozhoduje poradi v souboru. */
+input[type="checkbox"],
+table.husta input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  /* Fajfku kresli Pico obrazkem na pozadi - sama od sebe by na kolecku
+     zustala drobna, takze se zvetsuje zvlast. */
+  background-size: .64rem auto;
+  /* Nezaskrtnute potrebuje zretelny obrys, jinak je z nej jen svetly flek
+     a clovek nepozna, ze se na nej da kliknout: stejny obrys jako textova
+     policka (aspon 3 : 1 proti sklu i vyplni; --border-strong dava 1,2 : 1). */
+  border-color: var(--border-policko);
+}
+/* Pico bere barvu zaskrtnuteho z techhle dvou promennych a fajfku kresli
+   obrazkem na pozadi. Proto se meni promenne, ne `background` - tim by se
+   fajfka smazala. */
+input[type="checkbox"]:checked,
+input[type="checkbox"]:checked:active,
+input[type="checkbox"]:checked:focus,
+table.husta input[type="checkbox"]:checked {
+  --pico-background-color: var(--kormorani-green);
+  --pico-border-color: var(--kormorani-green);
+  /* Obecne `border-color` vys (a v tabulce silnejsi `table.husta ...`) by jinak
+     platilo i pro zaskrtnute: tmavy obrys policka kolem zelene vyplne. Tmavsi
+     zelena drzi hranu kolecka aspon 3 : 1 proti sklu (vyplni samotna zelena ma
+     jen 3,2 : 1). */
+  border-color: var(--zelena-text);
+}
+
+td.cislo, th.cislo { text-align: right; }
+input.cislo { text-align: right; }
+/* Pole jen ke cteni (dnes nazev pevne kategorie, K-219/K-227) nesmi vypadat jako
+   upravitelne: sede pozadi, tlumene pismo, carkovany okraj a kurzor "nelze".
+   Selektor ma stejnou silu jako zakladni pravidlo Pica pro pole (`input:not(...)`),
+   rozhoduje poradi v souboru - app.css jde za pico.min.css. Barvy jsou jen nase
+   promenne (aplikace ma jedno, svetle tema). */
+input:not([type="checkbox"]):not([type="radio"])[readonly] {
+  background-color: var(--grey-100);
+  color: var(--text-muted);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+td.stred, th.stred { text-align: center; }
+
+/* ---- nahledy skenu ---- */
+img.nahled {
+  width: 4rem;
+  max-height: 5rem;
+  object-fit: cover;
+  object-position: top;
+  border: 1px solid var(--border-subtle);
+  background: #fff;
+}
+img.nahled.maly { width: 2.5rem; max-height: 3rem; }
+
+/* ---- zvyrazneni radku podle stavu ---- */
+tr.neprecteno > td { opacity: 0.88; }
+tr.nizka-jistota > td { background: rgba(238, 128, 39, 0.10); }
+
+/* Na skle plati tmavsi textova varianta - plna znackova zelen i cervena tu
+   maji kontrast pod 3:1. Vyznam barvy zustava (zelena = kladne), jen je
+   citelna. Vyjimka je hlavicka akce nad tmavym pozadim, ta ma vlastni
+   svetle odstiny vyse. */
+.kladne { color: var(--zelena-text); }
+.zaporne { color: var(--cervena-text); }
+
+/* Chyba u konkretniho pole formulare: text chyby je pod polem a navazany
+   pres aria-describedby, pole s aria-invalid ma cerveny obrys. Barva viz --chyba-pole;
+   kontrast hlida automaticky test. */
+small.chyba-pole { display: block; color: var(--chyba-pole); font-weight: 600; }
+/* V radku poli (.radek) by text chyby zvedl pole vedle sebe od spodni hrany a policka
+   by nebyla v jedne rovine. Radek s chybou proto zarovna labely nahoru; tlacitko
+   zustane dole (u spodni hrany nejvyssiho labelu). */
+.radek:has(.chyba-pole) { align-items: flex-start; }
+.radek:has(.chyba-pole) > button,
+.radek:has(.chyba-pole) > [role="button"] { align-self: flex-end; }
+:is(input, select, textarea)[aria-invalid="true"] {
+  --pico-border-color: var(--chyba-pole);
+  border-color: var(--chyba-pole);
+}
+
+small.jistota-nizka { color: var(--oranzova-text); display: block; }
+small.jistota-stredni { color: var(--text-muted); display: block; }
+small.jistota-vysoka { display: none; }
+small.poznamka { display: block; color: var(--text-muted); }
+
+/* ---- Odznacky (Badge) ----
+   Barva odznacku nese vyznam: zelena = v poradku, zluta = neco chybi,
+   cervena = problem. Neutralni odznacek je jen popisek, ne stav. */
+.stitek {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .15rem .65rem;
+  border-radius: var(--radius-pill);
+  background: rgba(214, 226, 243, .72);
+  color: var(--text-heading);
+  font-size: .75rem;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+/* Stavove odznacky nesou jeste tecku - barva sama by nestacila tomu,
+   kdo barvy rozlisuje hure. */
+.stitek.ok::before,
+.stitek.chyba-stitek::before {
+  content: "";
+  width: .4rem;
+  height: .4rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+/* Pruh nad stránkami uzavřené akce: zapisovat nejde, dokud se akce
+   znovu neotevře. Žlutá = pozor, ne chyba (stejně jako .stitek.pozor). */
+.pruh-uzavrena {
+  margin: 0 0 1rem;
+  padding: .6rem .9rem;
+  border-left: 4px solid var(--status-warning);
+  border-radius: .5rem;
+  background: rgba(254, 244, 219, .85);
+  color: var(--zluta-text);
+}
+.stitek.ok { background: var(--green-050); color: var(--zelena-text); }
+.stitek.pozor { background: rgba(250, 178, 2, .28); color: var(--zluta-text); }
+.stitek.chyba-stitek { background: var(--red-050); color: var(--cervena-text); }
+.stitek.zvyrazneny { background: var(--kormorani-blue); color: #fff; }
+
+/* ---- Mrizka dochazky ----
+   Sloupec na kazdy den akce. Dni byva az ctrnact, takze sloupce musi byt uzke -
+   proto zkratka dne nad datem pod sebou, ne vedle sebe. */
+.dochazka th .den-zkratka,
+.dochazka th .den-cislo {
+  display: block;
+  font-weight: 600;
+}
+.dochazka th .den-zkratka { font-size: .75rem; color: var(--text-muted); }
+.dochazka th .den-cislo { font-size: .78rem; white-space: nowrap; }
+.dochazka td input[type="checkbox"] { margin: 0; }
+/* <label> kolem zaskrtavatka: na mysi se nezmeni nic, na dotykovem displeji
+   (viz `pointer: coarse` nahore) z neho je klikaci plocha 44 x 44 px. */
+.dochazka label.bunka {
+  /* `contents`: na mysi <label> nema vlastni box, zaskrtavatko lezi stejne
+     jako predtim a radek se nezvetsi. */
+  display: contents;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+/* Vikend jen tlumenym podkladem - je to orientacni bod, ne stav. */
+.dochazka .vikend { background: rgba(214, 226, 243, .35); }
+
+/* Spoctene cislo (osobodny, detodny) se tlumi, aby slo poznat od rucne
+   vepsaneho. Rucni cislo ma prednost a zustava plne cerne. */
+.hodnota.spoctene {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ---- Varovani o datu uctenky mimo termin akce ----
+   Tri stupne podle vzdalenosti od terminu: zluta -> oranzova -> cervena.
+   Zelena se tu nepouziva zamerne - v tehle aplikaci znamena "v poradku",
+   takze varovani by ji zbavilo vyznamu.
+
+   Vlastni trojice trid misto `pozor`/`chyba-stitek` proto, aby nazvy stupnu
+   mohly zustat v `app/services/kontrola_dat.py` a nemusely znat CSS. */
+.varovani-data {
+  display: flex;
+  margin-top: .3rem;
+  padding: .2rem .4rem .2rem .6rem;
+  align-items: center;
+  gap: .3rem;
+  line-height: 1.4;
+  text-align: left;
+}
+.varovani-data::before {
+  content: "";
+  flex: 0 0 auto;
+  width: .4rem;
+  height: .4rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+.varovani-text { flex: 1 1 auto; }
+.varovani-data.pozor    { background: rgba(250, 178, 2, .28); color: var(--zluta-text); }
+.varovani-data.varovani { background: rgba(238, 128, 39, .26); color: var(--oranzova-text); }
+.varovani-data.chyba    { background: var(--red-050); color: var(--cervena-text); }
+
+/* Ztisene varovani zustava videt, jen prestane kricet - proto neutralni
+   podklad a tlumeny text misto signalni barvy. */
+.varovani-data.ztisene {
+  background: rgba(214, 226, 243, .6);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Zvonek varovani ztisi, prskrtnuty ho zase rozsviti. Nema vlastni barvu -
+   prebira ji od odznacku, ve kterem sedi. */
+button.zvonek {
+  /* Pico dava tlacitkum vlastni sirku, vysku i stin. Bez jejich vynulovani
+     zvonek odznacek roztahne a text se zlomi do tri radku. */
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  margin: 0 0 0 auto;
+  padding: 0 0 0 .4rem;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font-size: .8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+button.zvonek:hover { opacity: .7; }
+
+/* Cervena je jen pro akce, ktere neco odeberou nebo zrusi - vcetne krizku `×`
+   v tabulkach. Mazaci tlacitko nikdy nenechavej sede: cervena je jedine
+   varovani, ktere clovek stihne zaregistrovat, nez klikne. */
+button.kontrast-chyba,
+[role="button"].kontrast-chyba {
+  /* Tmavsi cervena nez `--status-danger`: na te mela bila jen 4,3:1.
+     Signalni cervena zustava na proužcich a teckach, kde nejde o text. */
+  background-color: #B71F1F;
+  border-color: #B71F1F;
+  color: #fff;
+  background-image: linear-gradient(168deg, #D93A3A, #B71F1F 62%);
+  box-shadow:
+    0 10px 20px -8px rgba(120, 18, 18, .48),
+    inset 0 1px 0 rgba(255, 255, 255, .26);
+}
+button.kontrast-chyba:hover,
+[role="button"].kontrast-chyba:hover {
+  background-color: #9E1C1C;
+  border-color: #9E1C1C;
+  background-image: linear-gradient(168deg, #C42D2D, #9E1C1C 62%);
+}
+
+.dlazdice {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--mezera-lg);
+  margin-bottom: var(--mezera-xl);
+}
+.dlazdice article { margin: 0; }
+
+/* Cela dlazdice je odkaz do sekce - klika se kdekoli, ne jen na tlacitko. */
+.dlazdice-karta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 11rem;
+  padding: var(--mezera-lg);
+  color: var(--text-body);
+  text-decoration: none;
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+.dlazdice-karta:hover {
+  transform: translateY(-3px);
+  background-color: var(--sklo-tint-hover);
+  box-shadow: var(--sklo-lem), var(--sklo-stin-vyssi);
+}
+.dlazdice-karta::after {
+  content: "→";
+  position: absolute;
+  top: 1.35rem;
+  right: 1.5rem;
+  color: var(--text-muted);
+  transition: transform .16s ease, color .16s ease;
+}
+.dlazdice-karta:hover::after {
+  transform: translateX(3px);
+  color: var(--kormorani-blue);
+}
+.dlazdice-karta h3 {
+  margin: 0;
+  font-size: 1rem;
+  padding-right: 1.5rem;  /* misto pro sipku */
+}
+.dlazdice-karta .velke { font-size: 1.55rem; line-height: 1.15; }
+.dlazdice-stav {
+  margin: 0;
+  margin-top: auto;  /* stav drzi u spodni hrany, at jsou dlazdice srovnane */
+  font-size: .85rem;
+  color: var(--text-muted);
+}
+
+/* Telefon: dlazdice mela vysku 11 rem a pod sebou jich na obrazovku
+   vesla jen par. Na uzke obrazovce je nadpis vlevo a velke cislo vpravo,
+   stav pod nimi pres celou sirku; vyska vyjde z obsahu (zhruba polovina),
+   cela dlazdice zustava odkazem (aspon 44 px). Sipka je na vysce nadpisu.
+   Pocitac (od 37,5 rem) beze zmeny. */
+@media (max-width: 37.5rem) {
+  .dlazdice { gap: var(--mezera-md); }
+  .dlazdice-karta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--mezera-md);
+    row-gap: .15rem;
+    min-height: 2.75rem;
+    padding: var(--mezera-md);
+  }
+  .dlazdice-karta h3 { grid-column: 1; grid-row: 1; padding-right: 0; }
+  .dlazdice-karta .velke {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    padding-right: 1.75rem;  /* misto pro sipku */
+  }
+  .dlazdice-karta .dlazdice-stav { grid-column: 1 / -1; margin-top: 0; }
+  .dlazdice-karta::after { top: var(--mezera-md); right: var(--mezera-md); }
+}
+
+.velke {
+  font-family: var(--font-display);
+  color: var(--text-heading);
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin: 0.2rem 0;
+}
+
+/* ---- Prepinac klice ke Gemini (zdarma / placeny) ----
+   Pico dava odesilacim tlacitkum ve formulari sirku 100 %, takze by kazde
+   sedelo na vlastnim radku. Tady je chceme vedle sebe jako jeden prepinac. */
+.prepinac-tarifu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mezera-sm);
+  margin-bottom: var(--mezera-md);
+}
+.prepinac-tarifu button[type="submit"] {
+  width: auto;
+  margin-bottom: 0;
+}
+
+/* Tlacitka vedle sebe, at se na uzkem okne zalomi misto pretekani. */
+.tlacitka {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+.tlacitka [role="button"] { margin-bottom: 0; }
+
+/* Ucel platby je v pokladni knize hlavni textovy sloupec. Bez minimalni
+   sirky ho prohlizec zmackne uzeji nez sloupce s cisly a nazev uctenky
+   neni videt cely. Tabulka se vejde - je v `.siroka-tabulka`. */
+.kniha-ucel { min-width: 16rem; }
+
+/* ---- Pokladni kniha ----
+   Radek v klidu ukazuje jen text; policka se odkryji az tuztickou. Diky tomu
+   se do stejne vysky vejde vic radku a tabulka nevypada nacpana polickami.
+   Musi to stat AZ ZA pravidly `table.husta td` vys - maji stejnou silu, takze
+   rozhoduje poradi v souboru. */
+.kniha-zahlavi {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.kniha-zahlavi form { margin: 0; }
+
+table.kniha td {
+  vertical-align: middle;
+  padding: .75rem .65rem;
+}
+table.kniha .kniha-datum,
+table.kniha .kniha-doklad { white-space: nowrap; }
+/* Cislo dokladu ma pevnou sirku znaku, aby V01 a V02 pod sebou lícovaly. */
+table.kniha .kniha-doklad { font-variant-numeric: tabular-nums; }
+/* V rezimu upravy je prepinac prijem/vydej pod castkou, ne nalepeny na ni. */
+table.kniha .uprava + .uprava { margin-top: .25rem; }
+
+/* Sipky, tuzticka a krizek na konci radku. `nowrap`, aby se ctverice tlacitek
+   nezalomila na dva radky a nezvysila tim kazdy radek tabulky. */
+td.nastroje {
+  white-space: nowrap;
+  text-align: right;
+}
+td.nastroje > button + button { margin-left: .2rem; }
+article.nezarazene { border-left: 4px solid var(--status-warning); }
+/* Sirky sloupcu nezarazenych uctenek (driv `style=` v sablone). */
+.nezarazene-tabulka td.nezarazene-nahled { width: 3rem; }
+.nezarazene-tabulka td.nezarazene-slozka { width: 15rem; }
+/* Telefon: radek o peti prvcich se vedle sebe nevejde - nazev se lamal
+   po slovech a vyber slozky vyjizdel za kartu. Radek se proto sklada do mrizky:
+   nahled, nazev a castka nahore, vyber slozky pres celou sirku pod nimi.
+   Prepis tabulky na bloky se tyka JEN teto tabulky a jen uzke obrazovky; pocitac
+   (od 37,5 rem) zustava beze zmeny. */
+@media (max-width: 37.5rem) {
+  .nezarazene-tabulka,
+  .nezarazene-tabulka tbody { display: block; }
+  .nezarazene-tabulka tr {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+    align-items: start;
+    gap: .35rem .75rem;
+    padding: .7rem 0;
+    border-bottom: var(--pico-border-width) solid var(--pico-muted-border-color);
+  }
+  .nezarazene-tabulka tbody tr:last-child { border-bottom: none; }
+  .nezarazene-tabulka td { display: block; padding: 0; border: none; width: auto; }
+  .nezarazene-tabulka td.nezarazene-nahled { width: auto; }
+  .nezarazene-tabulka td.nezarazene-slozka { width: auto; grid-column: 1 / -1; }
+  /* `.siroka-tabulka > table select` ma pro telefon min-width 9 rem (u siroke
+     tabulky se radeji posouva); tady ma vyber zabrat celou sirku bunky. */
+  .nezarazene-tabulka td.nezarazene-slozka select:not([hidden]) { width: 100%; min-width: 0; }
+  .nezarazene-tabulka td.cislo { white-space: nowrap; }
+}
+
+/* ---- Prihlasovaci stranka ----
+   Pozadi si nedela vlastni - je to to same, co ma zbytek aplikace. Prihlaseni
+   tak vypada jako prvni obrazovka tehoz programu, ne jako cizi stranka. */
+body.knm-prihlaseni header { display: none; }
+body.knm-prihlaseni main.container {
+  max-width: none;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+body.knm-prihlaseni .oznameni { width: 100%; max-width: 25rem; }
+
+.knm-prihlaseni-panel {
+  width: 100%;
+  max-width: 25rem;
+  /* Tmave sklo: pod nim prosvita barevne pozadi, takze panel neni "bily papir
+     na modrem", ale tabule polozena na tu samou fotku. Recept je stejny jako
+     u svetlych desek, jen tint a lem jsou v tmave variante. */
+  background-color: var(--sklo-tmave-tint);
+  background-image: var(--sklo-tmave-odlesk);
+  backdrop-filter: var(--sklo-blur-silne);
+  -webkit-backdrop-filter: var(--sklo-blur-silne);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--sklo-tmave-lem), 0 36px 70px -22px rgba(6, 16, 40, .66);
+  padding: 2.4rem 2rem;
+  color: #fff;
+}
+.knm-prihlaseni-panel img.znacka {
+  height: 2.9rem;
+  width: auto;
+  margin-bottom: 1.4rem;
+}
+.knm-prihlaseni-panel h1 {
+  font-size: 2rem;
+  line-height: 1.05;
+  color: #fff;
+  margin-bottom: .5rem;
+}
+.knm-prihlaseni-panel .podnadpis {
+  color: rgba(255, 255, 255, .78);
+  font-size: .92rem;
+  margin-bottom: 1.8rem;
+}
+.knm-prihlaseni-panel label {
+  display: block;
+  margin-bottom: 1rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: .75rem;
+  letter-spacing: .06em;
+  /* Popisek je maly a psany verzalkami, takze potrebuje vic sily nez bezny
+     text - pri .62 mel na tmavem skle kontrast jen 2,7:1. */
+  color: rgba(255, 255, 255, .88);
+}
+/* Ikona sedi uvnitr policka. Policko ma proto vetsi levy odsazeni a ikona je
+   nad nim absolutne - kdyby byla vedle, rozbila by se sirka na uzkem displeji. */
+.knm-policko {
+  position: relative;
+  display: block;
+  margin-top: .4rem;
+}
+.knm-policko svg {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: rgba(255, 255, 255, .80);
+  pointer-events: none;
+}
+.knm-prihlaseni-panel input {
+  background: rgba(255, 255, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .26);
+  border-radius: var(--radius-pill);
+  color: #fff;
+  padding: .85rem 1.1rem .85rem 2.8rem;
+  margin-bottom: 0;
+  font-size: 1rem;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+/* Policko dedi pismo z popisku nad sebou, a SKAUT ma jen verzalky - clovek by
+   pak vsechno, co napise, videl velkymi pismeny. Proto tu vracime pismo textu. */
+.knm-prihlaseni-panel input {
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.knm-prihlaseni-panel input::placeholder { color: rgba(255, 255, 255, .72); }
+.knm-prihlaseni-panel input:focus {
+  background: rgba(255, 255, 255, .24);
+  border-color: var(--kormorani-yellow);
+  box-shadow: 0 0 0 3px rgba(250, 178, 2, .28);
+}
+/* Prihlaseni lezi na tmave plose - modry kruh z obecneho pravidla fokusu by tam
+   zmizel, tak policka drzi zlutou, jak mela. */
+:root .knm-prihlaseni-panel input:focus-visible {
+  outline-color: var(--kormorani-yellow);
+}
+.knm-prihlaseni-panel button[type="submit"] {
+  width: 100%;
+  margin-top: var(--mezera-md);
+  min-height: 2.9rem;
+  font-size: 1rem;
+}
+.knm-prihlaseni-panel .oznameni {
+  background: rgba(253, 236, 236, .82);
+  margin-bottom: 1.4rem;
+  color: var(--text-body);
+}
+/* Pozor na poradi: `code` v panelu je bily na tmavem, ALE uvnitr svetle
+   hlasky (`.oznameni`) musi byt naopak tmavy na svetlem - jinak by tam byl
+   bily text na svetle ruzove a prikaz `uv run heslo` by nesel precist. */
+.knm-prihlaseni-panel code {
+  background: rgba(0, 0, 0, .30);
+  color: #fff;
+}
+.knm-prihlaseni-panel .oznameni code {
+  background: rgba(42, 73, 131, .12);
+  color: var(--text-body);
+}
+
+/* Chyba u pole na prihlaseni: tmavo-cerveny text z obecneho pravidla by na
+   tmavem skle nebyl videt, proto ma svetlou plosku (tmavy text na svetle, kontrast
+   nezavisi na tom, co prosvita pod sklem) a pole svetle cerveny obrys. */
+.knm-prihlaseni-panel input[aria-invalid="true"] {
+  border-color: #ffb4b4;
+  box-shadow: 0 0 0 2px rgba(255, 180, 180, .55);
+}
+.knm-prihlaseni-panel small.chyba-pole {
+  margin-top: .45rem;
+  padding: .35rem .9rem;
+  border-radius: var(--radius-pill);
+  background: rgba(253, 236, 236, .95);
+  font-family: var(--font-body);
+  font-size: .85rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* ---- Bublina se stavem prubezneho ukladani (vpravo dole) ---- */
+.stav-ukladani {
+  position: fixed;
+  right: 1.6rem;
+  bottom: 1.6rem;
+  z-index: 50;
+  padding: .55rem 1.1rem;
+  border-radius: var(--radius-pill);
+  background-color: rgba(255, 255, 255, .82);
+  background-image: var(--sklo-odlesk);
+  backdrop-filter: var(--sklo-blur);
+  -webkit-backdrop-filter: var(--sklo-blur);
+  box-shadow: var(--sklo-lem), var(--sklo-stin);
+  color: var(--text-body);
+  font-size: .85rem;
+  opacity: 0;
+  transform: translateY(.5rem);
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.stav-ukladani.je-videt { opacity: 1; transform: translateY(0); }
+.stav-ukladani.hotovo { color: var(--zelena-text); }
+.stav-ukladani.chyba { color: var(--cervena-text); background-color: rgba(253, 236, 236, .94); }
+/* Chyba ulozeni nezmizi sama a nabizi "Zkusit znovu", proto se na ni da
+   kliknout (zbytek bubliny klikani nepohlti). */
+.stav-ukladani.chyba {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  border-radius: var(--radius-lg);
+  pointer-events: auto;
+}
+.stav-ukladani .stav-akce { margin: 0; flex: none; width: auto; }
+
+/* ---- Hlasky vpravo dole ----
+   Hlasky po akci (.oznameni z base.html) i bublina prubezneho ukladani
+   lezi v jednom sloupci pripichnutem k pravemu dolnimu rohu okna - at je
+   clovek na strance kdekoli, vidi je, a navzajem se neprekryvaji. Sklo
+   dostavaji jako <article> ze sekce Sklenene nadoby, tady jen poloha.
+   Sloupec sam klikani nepohlti (pointer-events), jen hlasky v nem. */
+.hlasky {
+  position: fixed;
+  right: 1.6rem;
+  bottom: 1.6rem;
+  z-index: 1100;             /* nad mapou (Leaflet do 1000) */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--mezera-sm);
+  width: min(26rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+/* `body` na zacatku kvuli prihlaseni - tam ma .oznameni vlastni sirku. */
+body .hlasky .oznameni {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: .85rem 2.6rem .85rem 1.1rem;
+  font-size: .92rem;
+  box-shadow: var(--sklo-lem), var(--shadow-lg);
+  pointer-events: auto;
+  animation: hlaska-prijde .22s ease-out;
+}
+/* Delka prechodu (.2s) musi sedet s casovacem v js/spolecne.js (`zavriHlasku`, 220 ms). */
+.hlasky .oznameni.odchazi {
+  opacity: 0;
+  transform: translateY(.5rem);
+  transition: opacity .2s ease, transform .2s ease;
+}
+@keyframes hlaska-prijde {
+  from { opacity: 0; transform: translateY(.6rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Krizek na zavreni. Maze jen hlasku z obrazovky, ne data - proto neni
+   cerveny (kontrast-chyba je jen pro to, co opravdu maze nebo odebira). */
+.hlasky .hlaska-zavrit {
+  position: absolute;
+  top: .45rem;
+  right: .45rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.hlasky .hlaska-zavrit:hover { background: rgba(42, 73, 131, .10); transform: none; }
+/* Bublina prubezneho ukladani uvnitr sloupce uz nepotrebuje vlastni polohu. */
+.hlasky .stav-ukladani { position: static; }
+@media (max-width: 34rem) {
+  .hlasky { right: 1rem; bottom: 1rem; }
+}
+
+/* ---- Plocha, do ktere jdou soubory pretahnout mysi ---- */
+.pretahovani {
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  background: var(--glass-light);
+  transition: border-color .15s ease, background-color .15s ease;
+}
+/* Pri pretazeni souboru nad plochu zezelena - potvrzeni, ze pusteni zabere. */
+.pretahovani.pretahuje-se {
+  border-color: var(--kormorani-green);
+  background: rgba(0, 136, 54, .10);
+}
+.pretahovani input[type="file"] { margin: .8rem auto 0; max-width: 100%; }
+.pretahovani .vyzva {
+  display: block;
+  font-family: var(--font-display);
+  color: var(--text-heading);
+  text-transform: uppercase;
+  font-size: .95rem;
+}
+.pretahovani > small { display: block; margin-top: .2rem; }
+
+/* Tlacitko fotoaparatu u nahravani uctenek: na pocitaci se neukazuje, na
+   telefonu (uzky a dotykovy displej) viz blok "Telefon" nize. Vlastni
+   <input> je schovany, label ho otevre. */
+.fotoaparat { display: none; }
+.fotoaparat input { display: none; }
+@media (max-width: 37.5rem) and (pointer: coarse) {
+  .pretahovani-uctenky .fotoaparat {
+    display: block;
+    margin: .5rem auto 0;
+    padding: .55rem 1rem;
+    border-radius: var(--radius-pill);
+    background: var(--kormorani-blue);
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+  }
+}
+/* Telefon: plocha na pretahovani je mensi a bez textu - na telefonu se
+   nic nepretahuje mysi, ale plocha zustava (pusteni souboru na iOS funguje dal).
+   Jen u uctenek; import ucastniku a obnova maji svuj vzhled. */
+@media (max-width: 37.5rem) {
+  .pretahovani-uctenky { padding: .6rem .75rem; }
+  .pretahovani-uctenky .vyzva,
+  .pretahovani-uctenky > small { display: none; }
+  .pretahovani-uctenky input[type="file"]:not([data-fotoaparat]) { margin-top: 0; }
+}
+
+/* ---- Radek nebo blok prepnuty tuztickou do rezimu upravy ----
+   Bez JavaScriptu tuzticka nefunguje, takze se v tom pripade ukazou rovnou
+   policka - jinak by udaje nesly opravit vubec. Trida `js` prijde z js/spolecne.js.
+   Puvodne to platilo jen pro radky tabulky (`tr`); hlavicka cestaku pouziva
+   stejny prepinac na celem bloku, proto `.radek-upravy` vedle `tr`. */
+:is(tr, .radek-upravy) .hodnota { display: none; }
+[data-upravit] { display: none; }
+
+.js :is(tr, .radek-upravy) .hodnota { display: inline; }
+.js :is(tr, .radek-upravy) .uprava { display: none; }
+.js [data-upravit] { display: inline-block; }
+.js :is(tr, .radek-upravy).upravuje-se .uprava { display: block; width: 100%; }
+.js :is(tr, .radek-upravy).upravuje-se .hodnota { display: none; }
+.js tr.upravuje-se > td { background: rgba(238, 243, 250, .8); }
+[data-upravit][aria-pressed="true"] {
+  background: var(--kormorani-yellow);
+  border-color: var(--kormorani-yellow);
+  color: var(--kormorani-blue);
+}
+
+/* ---- Pracovni plocha: bloky vedle sebe ---- */
+.pracovni-plocha {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--mezera-lg);
+  align-items: start;
+  margin-bottom: var(--mezera-xl);
+}
+.pracovni-plocha > article { margin: 0; height: 100%; }
+.pracovni-plocha h3 {
+  font-size: .95rem;
+  margin-top: 0;
+  margin-bottom: var(--mezera-md);
+}
+/* Vysvetlivka pod tlacitkem, ne vedle nej - tlacitko je uzke a text by se mu
+   jinak oblil kolem. */
+.pracovni-plocha > article > small { display: block; margin-top: .7rem; }
+.pracovni-plocha > article form { margin-bottom: 0; }
+
+/* Blok, ktery zatim nema co delat - napr. cteni AI, dokud nejsou nahrane skeny.
+   Odbarvi se jen castecne. Puvodni `grayscale(.85)` + `opacity: .78` z nej
+   delaly sedou placku, ve ktere se spatne cetl i nadpis. */
+article.uspane {
+  /* Jen lehke odbarveni. Silnejsi filtr (drive `grayscale(.85)` s `opacity`)
+     z bloku udelal sedou placku, ve ktere se spatne cetl nadpis i vysvetlivka -
+     a hlavne z nej sundal sklo, takze mezi ostatnimi kartami pusobil rozbite. */
+  filter: saturate(.8);
+}
+article.uspane h3,
+article.uspane p { color: var(--text-muted); }
+article.uspane button { pointer-events: none; }
+
+/* ---- Seznam nahranych souboru v bloku Nahrat ---- */
+.seznam-souboru {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+.seznam-souboru li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .4rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: .85rem;
+}
+.seznam-souboru li:last-child { border-bottom: none; }
+.seznam-souboru span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Souhrnna tabulka uvnitr karty: bez skla a bez ramu ---- */
+table.souhrn {
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  margin-bottom: .6rem;
+}
+table.souhrn td { padding: .5rem 0; border-bottom: 1px solid var(--border-subtle); }
+table.souhrn tr:last-child td { border-bottom: none; }
+
+/* ---- Zahlavi bloku: nadpis vlevo, akce vpravo ---- */
+.hlavicka-bloku {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--mezera-md);
+  margin-bottom: var(--mezera-lg);
+}
+.hlavicka-bloku h3 { margin: 0; }
+.hlavicka-bloku button { margin-bottom: 0; width: auto; }
+
+/* ---- Karta pro pridavani noveho zaznamu ----
+   Odlisena od seznamu uz existujicich, at si je uzivatel neplete. */
+article.pridavani {
+  border-left: 4px solid var(--kormorani-yellow);
+  background: rgba(255, 252, 243, .78);
+}
+article h3:first-child { margin-top: 0; }
+
+/* ---- Slozka jako sbalitelna karta ----
+   Slozek byva deset i vic. Sbalene se vejdou na obrazovku najednou a souhrn
+   v zahlavi rekne to podstatne bez rozkliknuti. */
+details.slozka-karta {
+  margin-bottom: var(--mezera-md);
+  padding: 0;
+}
+details.slozka-karta > summary {
+  display: flex;
+  align-items: baseline;
+  gap: .8rem;
+  flex-wrap: wrap;
+  padding: 1.1rem 1.5rem;
+  border-bottom: none;
+  cursor: pointer;
+}
+details.slozka-karta[open] > summary { border-bottom: 1px solid var(--border-subtle); }
+.slozka-nazev {
+  font-family: var(--font-display);
+  color: var(--text-heading);
+  text-transform: uppercase;
+  font-size: .95rem;
+}
+/* Cislo dokladu pred nazvem slozky. Neni to stav ani varovani, jen znacka -
+   proto neutralni modra ze stitku, ne signalni barva. Cislice v jedne sirce,
+   at cisla pod sebou stoji v jednom sloupci. */
+.slozka-cislo {
+  flex: none;
+  padding: .15rem .55rem;
+  border-radius: var(--radius-pill);
+  background: rgba(214, 226, 243, .72);
+  color: var(--text-heading);
+  font-family: var(--font-display);
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.slozka-meta { color: var(--text-muted); font-size: .85rem; }
+.slozka-soucet { margin-left: auto; color: var(--text-heading); }
+.slozka-telo { padding: var(--mezera-lg); }
+.slozka-telo .siroka-tabulka { margin-top: var(--mezera-md); }
+/* Horni okraj patri obalu, ne tabulce: obal s `overflow` tvori vlastni blokovy
+   kontext, takze se okraj tabulky uvnitr uz neslouci s okrajem popisku nad
+   nim a cela slozka by se posunula o 16 px dolu (na pocitaci). */
+.slozka-telo .siroka-tabulka > table { margin-top: 0; }
+/* Sirky sloupcu uctenek ve slozce (driv `style=` v sablone). */
+.slozka-tabulka td.slozka-nahled { width: 3rem; }
+.slozka-tabulka td.slozka-vyber { width: 15rem; }
+/* Telefon: otevrena slozka. Radek uctenky se sklada do mrizky jako u
+   nezarazenych (nahled, nazev, castka nahore, vyber slozky pres celou sirku
+   pod nimi), takze se tabulka neposouva do strany - tim padá pro tuto tabulku
+   rozhodnuti K-146 (posuvny obal). Mensi odsazeni karty a mezery mezi poli.
+   Pocitac (od 37,5 rem) zustava beze zmeny. */
+@media (max-width: 37.5rem) {
+  details.slozka-karta > summary { padding: .8rem .9rem; gap: .3rem .6rem; }
+  .slozka-telo { padding: .7rem .8rem; }
+  .slozka-telo .radek { gap: 0; }
+  .slozka-telo label { margin-bottom: .5rem; }
+  .slozka-telo input:not([type="checkbox"]), .slozka-telo select:not([hidden]) { margin-bottom: .3rem; }
+  .slozka-tabulka,
+  .slozka-tabulka tbody { display: block; }
+  .slozka-tabulka tr {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+    align-items: start;
+    gap: .3rem .6rem;
+    padding: .55rem 0;
+    border-bottom: var(--pico-border-width) solid var(--pico-muted-border-color);
+  }
+  .slozka-tabulka tbody tr:last-child { border-bottom: none; }
+  .slozka-tabulka td { display: block; padding: 0; border: none; width: auto; }
+  .slozka-tabulka td.slozka-nahled,
+  .slozka-tabulka td.slozka-vyber { width: auto; }
+  .slozka-tabulka td.slozka-vyber { grid-column: 1 / -1; }
+  .slozka-tabulka td.slozka-vyber select:not([hidden]) { width: 100%; min-width: 0; margin-bottom: 0; }
+  .slozka-tabulka td.cislo { white-space: nowrap; }
+}
+
+/* ---- Import ucastniku: vyber souboru vlevo, spusteni vpravo ----
+   Dve stejne siroke poloviny. Tlacitko ma vlastni plochu, aby bylo videt, ze je
+   to samostatny krok, a ne soucast plochy pro pretahovani. Na uzkem displeji
+   se poloviny poskladaji pod sebe. */
+.import-ucastniku {
+  display: grid;
+  /* `minmax(0, 1fr)`: samotne `1fr` znamena "aspon tak siroke jako obsah", a
+     policko na vyber souboru se nezuzi - plocha pak na telefonu pretekla. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mezera-lg);
+  align-items: stretch;
+  margin-bottom: var(--mezera-md);
+}
+.import-ucastniku > .pretahovani { margin: 0; }
+/* Policko na soubor dostava od Pica plnou sirku, takze se v ploše nezarovna
+   na stred. `width: auto` mu vrati sirku podle obsahu a `text-align` rodice
+   uz ho posadi doprostred. */
+.import-ucastniku input[type="file"] { width: auto; max-width: 100%; min-width: 0; }
+.pretahovani input[type="file"] { min-width: 0; }
+.import-ucastniku .import-spusteni {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  border-radius: var(--radius-lg);
+  background: var(--glass-light);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .70);
+}
+.import-ucastniku .import-spusteni button {
+  width: 100%;
+  max-width: 16rem;
+  margin: 0;
+}
+.import-ucastniku .import-spusteni small { color: var(--text-muted); }
+.import-ucastniku .obnovit-znovu { grid-column: 1 / -1; display: flex; gap: .5rem; align-items: center; }
+.import-ucastniku .obnovit-znovu input { margin: 0; }
+@media (max-width: 44rem) {
+  .import-ucastniku { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- Zalozeni cestovniho prikazu ----
+   Deset polí pod sebou by udelalo sloupec pres celou obrazovku. Ve dvojicich
+   se formular vejde na jednu obrazovku a souvisejici udaje stoji vedle sebe
+   (vozidlo + opotrebeni, uctenka + cena paliva). */
+.cestak-zalozeni {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--mezera-lg);
+  margin-top: var(--mezera-md);
+}
+.cestak-zalozeni > .tlacitka { grid-column: 1 / -1; margin-top: var(--mezera-sm); }
+@media (max-width: 44rem) {
+  .cestak-zalozeni { grid-template-columns: 1fr; }
+}
+/* Zalozeni je jednorazovy krok, ne stalý formulář na obrazovce - nemusí
+   zabírat tolik místa jako karta s daty. Menší popisky a nižší políčka. */
+.cestak-zalozeni label { font-size: .85rem; margin-bottom: var(--mezera-sm); }
+.cestak-zalozeni input,
+.cestak-zalozeni select {
+  --pico-form-element-spacing-vertical: .45rem;
+  font-size: .9rem;
+}
+/* Nadpis "Založit cestovní příkaz" je jediná zluta akce na strance - zaslouzi
+   si vic vahy nez ostatni popisky v <summary>, proto dvojnasobne velky. */
+.pridavani .nadpis-pridavani {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  line-height: 1.15;
+  color: var(--text-heading);
+}
+
+/* ---- Hlavicka cestovniho prikazu ----
+   Staticky prehled udaju misto formulare - pusobi jako popisek cesťáku, ne
+   jako dalsi vec k vyplneni. Jedna tuzticka vpravo nahore prepne cely blok
+   do rezimu upravy (viz `.radek-upravy` v sekci Tuzticka). Modry prouzek
+   nahore ho odlisuje od `.pridavani` (ten ma zluty vlevo, je to jiny ucel -
+   pridani zaznamu, ne popis existujiciho). */
+.cestak-hlavicka {
+  position: relative;
+  border-top: 4px solid var(--kormorani-blue);
+  padding-top: var(--mezera-md);
+}
+.cestak-hlavicka-znacka {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: .78rem;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: var(--mezera-sm);
+}
+.cestak-hlavicka-znacka svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+.cestak-hlavicka-tuzka {
+  position: absolute;
+  top: var(--mezera-md);
+  right: var(--mezera-lg);
+}
+.cestak-hlavicka-obsah {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0 var(--mezera-2xl);
+  margin-bottom: 0;
+}
+.cestak-hlavicka-sloupec h3 {
+  font-size: .85rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  margin: 0 0 var(--mezera-sm);
+}
+.cestak-hlavicka-pole {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mezera-md);
+  padding: .3rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: .88rem;
+}
+.cestak-hlavicka-pole .popisek { color: var(--text-muted); flex: none; }
+/* Popisek je <label for>; Pico by mu dalo dolni okraj a posunulo radek. */
+.cestak-hlavicka-pole label.popisek { margin: 0; }
+.cestak-hlavicka-pole .hodnota { text-align: right; font-weight: 600; }
+.cestak-hlavicka-pole .uprava { margin: 0; }
+.cestak-hlavicka-vysvetlivka { margin: var(--mezera-sm) 0 0; }
+.cestak-hlavicka-souhrn {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .3rem var(--mezera-md);
+  margin-top: var(--mezera-md);
+  padding-top: var(--mezera-sm);
+  border-top: 1px dashed var(--border-subtle);
+  font-size: .85rem;
+}
+.cestak-hlavicka-souhrn span { color: var(--text-muted); }
+.cestak-hlavicka-souhrn strong { text-align: right; }
+.cestak-hlavicka-ulozit { grid-column: 1 / -1; }
+@media (max-width: 44rem) {
+  .cestak-hlavicka-tuzka { position: static; float: right; }
+}
+
+/* ---- Mapa a tabulka jizd v cestovnim prikazu ----
+   Mapa i tabulka jizd jsou pod sebou, obe na celou sirku stranky - mapa
+   nahore jako orientacni prvek, tabulka jizd pod ni ma dost mista na vsechny
+   sloupce najednou. */
+.cestak-mapa-plocha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mezera-lg);
+  margin-bottom: var(--mezera-md);
+}
+.cestak-jizdy-sloupec > article.pridavani { margin-top: 0; }
+/* Souhrn pod jizdami (Ujeto, Soucet, Celkem) lezi mimo kartu primo na tmavem pozadi
+   stranky. Obecne pravidlo `table.souhrn td` (vyse) mu dava tmavy text, urceny pro
+   svetlou kartu - vyslo 1,3:1. Proto tady svetle pismo na vsech sirkach (Z7 telefon,
+   Z13 tablet a pocitac). Barvu bere kontext (sloupec jizd), ne `:root`. */
+.cestak-jizdy-sloupec > table.souhrn th,
+.cestak-jizdy-sloupec > table.souhrn td { color: #fff; border-color: rgba(255, 255, 255, .25); }
+
+/* Pevne sirky sloupcu - bez nich by se tabulka pri prepnuti tuztickou z
+   hodnoty na policko pokazde jinak siroka a text by "poskakoval". `<col>`
+   samo o sobe nowrap neumi (na sirku tabulkoveho sloupce ma vliv jen
+   `width`), proto se nowrap nastavuje primo bunkam - Datum, Prostredek
+   a cisla jsou vzdy kratke, tak se nezalamuji; adresy v Z/Do zalamovat
+   smi, at se dlouha adresa neusekne. */
+.cestak-jizdy-tabulka { table-layout: fixed; width: 100%; font-size: .82rem; }
+.cestak-jizdy-tabulka th,
+.cestak-jizdy-tabulka td { padding: .5rem .4rem; overflow-wrap: break-word; }
+.cestak-jizdy-tabulka th { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cestak-jizdy-tabulka td:nth-child(1),
+.cestak-jizdy-tabulka td:nth-child(4),
+.cestak-jizdy-tabulka td.cislo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cestak-jizdy-tabulka .sl-datum { width: 10%; }
+.cestak-jizdy-tabulka .sl-odkud,
+.cestak-jizdy-tabulka .sl-kam { width: 14%; }
+.cestak-jizdy-tabulka .sl-prostredek { width: 9%; }
+.cestak-jizdy-tabulka .sl-sazba,
+.cestak-jizdy-tabulka .sl-hodnota,
+.cestak-jizdy-tabulka .sl-cena { width: 8%; }
+.cestak-jizdy-tabulka .sl-nastroje { width: 25%; }
+/* Ctveri tlacitek (sipky, tuzticka, krizek) je v uzsim sloupci na jedno
+   platko tesna - mensi vodorovny odstup a uzsi policka jim daji misto,
+   aby se nezalamovala na dva radky ani neschovala za vodorovny scroll. */
+.cestak-jizdy-tabulka td.nastroje { padding-inline: .2rem; }
+.cestak-jizdy-tabulka td.nastroje > button + button { margin-left: .1rem; }
+.cestak-jizdy-tabulka td.nastroje button.drobne { padding-inline: .3rem; min-width: 1.5rem; }
+
+/* ---- Zaverecne akce cestaku ----
+   Pridat do vydaju / Vytisknout / Smazat patri na konec stranky, az je
+   cesťák hotovy - ne hned vedle nadpisu tabulky jizd. Stejne siroka tlacitka
+   vedle sebe (misto puvodnich velkych) delaji citelnou zaverecnou listu bez
+   zbytecne vysokych ploch. */
+.cestak-zaverecne-tlacitka {
+  margin-top: var(--mezera-2xl);
+}
+.cestak-zaverecne-tlacitka > button,
+.cestak-zaverecne-tlacitka > [role="button"] {
+  flex: 1 1 12rem;
+  width: auto;
+  margin-bottom: 0;
+}
+
+/* Mapa je v kartě jako kterýkoli jiný blok (viz sekce Skleněné nádoby), ale
+   dlaždice samy o sobě sklo nedostávají - jsou to hotové obrázky, ne
+   průhledná vrstva, a sklo na nich by jen zkreslilo barvy mapy. */
+.cestak-mapa-sloupec { margin-bottom: 0; }
+#mapa-cesty {
+  height: 30rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--pico-muted-border-color);
+}
+
+/* Panel vlevo, mapa vpravo - jako na mapy.cz. Na uzke obrazovce panel nad
+   mapou. Panel lezi v te same karte jako mapa, takze sklo nedostava (sklo na
+   skle se nedela). */
+.mapa-rozlozeni.s-panelem {
+  display: grid;
+  grid-template-columns: 18rem 1fr;
+  gap: var(--mezera-lg);
+  align-items: start;
+}
+@media (max-width: 56rem) {
+  .mapa-rozlozeni.s-panelem { grid-template-columns: 1fr; }
+}
+.mapa-panel { margin: 0; display: flex; flex-direction: column; gap: var(--mezera-sm); }
+.mapa-napoveda { margin: 0; font-size: .85rem; color: var(--text-muted); }
+.mapa-volba { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; font-size: .85rem; }
+.mapa-volba > span { flex-basis: 100%; font-weight: 600; }
+.mapa-volba button { margin-bottom: 0; width: auto; display: inline-flex; align-items: center; gap: .4rem; }
+/* Zvoleny bod (aria-pressed) je zvyrazneny zlutou stejne jako policko v radku. */
+.mapa-volba button[aria-pressed="true"] {
+  border-color: var(--kormorani-yellow);
+  box-shadow: 0 0 0 .2rem rgba(250, 178, 2, .35);
+}
+.mapa-znacka {
+  display: inline-block;
+  width: .85rem;
+  height: .85rem;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--border-strong);
+}
+.mapa-znacka.z { background: var(--kormorani-blue); }
+.mapa-znacka.do { background: var(--kormorani-yellow); }
+
+.mapa-trasa {
+  margin: 0;
+  font-size: .9rem;
+  color: var(--text-muted);
+}
+.mapa-trasa.hotovo { color: var(--text-heading); font-weight: 700; font-size: 1.05rem; }
+.mapa-trasa.chyba { color: var(--cervena-text); }
+.mapa-trasa.varovani { color: var(--oranzova-text); font-weight: 600; }
+.mapa-panel-tlacitka { display: flex; flex-wrap: wrap; gap: var(--mezera-sm); align-items: center; }
+.mapa-panel-tlacitka button { margin-bottom: 0; }
+
+/* Naseptavac u Odkud/Kam - rozbalovaci seznam pod polickem. Je to nabidka
+   nad kartou (ne dalsi vrstva skla), proto plny bily papir: u Odkud lezi
+   primo pres policko Kam a pri jakekoli pruhlednosti by jeho text prosvital
+   mezi vysledky. */
+.mapa-naseptavac {
+  position: absolute;
+  z-index: 1000;             /* nad mapou - Leaflet ma vrstvy az do 800 */
+  left: 0;                   /* zarovnane s polickem Z / Do */
+  right: 0;
+  top: 100%;
+  margin: .25rem 0 0;
+  padding: .3rem;
+  list-style: none;
+  max-height: 20rem;
+  overflow-y: auto;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+}
+.mapa-naseptavac li {
+  list-style: none;
+  margin: 0;
+  padding: .45rem .6rem;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  line-height: 1.3;
+}
+.mapa-naseptavac li:hover,
+.mapa-naseptavac li.vybrany { background: rgba(42, 73, 131, .10); }
+.mapa-naseptavac li strong { display: block; font-size: .88rem; color: var(--text-body); }
+.mapa-naseptavac li small { display: block; font-size: .75rem; color: var(--text-muted); }
+.mapa-naseptavac li.prazdne { cursor: default; color: var(--text-muted); font-size: .85rem; }
+/* "Jen prejmenovat" neni misto, ale volba - oddelena carou od vysledku
+   a prilepena ke spodku seznamu, at je videt i pri dlouhem seznamu. */
+.mapa-naseptavac li.prejmenovat {
+  position: sticky;
+  bottom: -.3rem;            /* pres spodni padding seznamu */
+  background: #fff;
+  margin-top: .2rem;
+  border-top: 1px solid var(--border-strong);
+  border-radius: 0 0 var(--radius-xs) var(--radius-xs);
+}
+/* Plna barva, ne pruhledna jako u ostatnich - pod prilepenou polozkou
+   podjizdeji vysledky. */
+.mapa-naseptavac li.prejmenovat:hover,
+.mapa-naseptavac li.prejmenovat.vybrany { background: #eaeef5; }
+.mapa-naseptavac li.prejmenovat strong { font-weight: 600; font-style: italic; }
+
+/* Tlacitka +/- v mape. Leaflet je dela jako <a role="button">, a na to se
+   chytaji nase pravidla pro tlacitka (tobolka, min-height 2.4rem) - v uzkem
+   Leafletovem ramecku se pak usekla. Tady z nich jsou samostatna kulata
+   tlacitka s bilym symbolem. */
+#mapa-cesty .leaflet-control-zoom {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+#mapa-cesty .leaflet-control-zoom a {
+  width: 2.4rem;
+  height: 2.4rem;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--kormorani-blue);
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+}
+#mapa-cesty .leaflet-control-zoom a.leaflet-disabled { opacity: .45; }
+.mapa-vypnuta {
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  height: 26rem;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--pico-muted-border-color);
+  text-align: center;
+  padding: var(--mezera-md);
+}
+.mapa-vypnuta p { color: var(--text-muted); margin: 0; }
+.mapa-atribuce {
+  font-size: .75rem;
+  color: var(--text-muted);
+  margin: var(--mezera-xs) 0 0;
+}
+
+/* ---- Bilance ---- */
+table.souhrn.bilance td { padding: .65rem 0; }
+table.souhrn.bilance .vysledek td {
+  border-top: 2px solid var(--border-default);
+  padding-top: .7rem;
+  font-size: 1.05rem;
+}
+
+/* ---- Nezkontrolovana uctenka ------------------------------------------
+   Cervena tu nemluvi o mazani, ale o stavu: "tohle jeste nikdo neoveril".
+   Je to stejna cervena jako u odznacku `chyba-stitek` - signalni barva na
+   vypln, ne na text. Proto proužek u leve hrany radku, jemne pozadi a
+   cerveny obrys u zaskrtavatka; pismenka v radku zustavaji cerna.
+
+   Musi to stat AZ ZA oranzovym podbarvenim `tr.nizka-jistota` vys: dokud
+   uctenka neni zkontrolovana, je cervena ta dulezitejsi zprava. Tridu
+   `nezkontrolovano` po zaskrtnuti sundava `js/tabulky.js`, takze cervena zmizi
+   hned, bez znovunacteni stranky. */
+tr.nezkontrolovano > td { background: rgba(229, 52, 52, .10); }
+tr.nezkontrolovano > td:first-child {
+  box-shadow: inset 4px 0 0 var(--status-danger);
+}
+/* Zapis `table.husta input...` je tu kvuli sile pravidla: obecne
+   zaskrtavatko vys uz barvu lemu nastavuje a slabsi zapis by prohral. */
+input.ok-zaskrtavatko:not(:checked),
+table.husta input.ok-zaskrtavatko:not(:checked) {
+  --pico-border-color: var(--border-policko-ok);
+  border-color: var(--border-policko-ok);
+  /* Silnejsi nez bezny lem - prazdne kolecko je jinak jen svetly flek. */
+  border-width: 3px;
+  background-color: rgba(229, 52, 52, .18);
+}
+
+/* ---- Priloha: modra sponka misto zelene fajfky ------------------------
+   Priloha neni "v poradku / hotovo", jen jina role skenu - a zelena v teto
+   aplikaci znamena hotovo. Proto ma vlastni tvar (zaobleny ctverecek, ne
+   kolecko), vlastni barvu (informacni modra) a vlastni obrazek (sponka).
+   Na prvni pohled tak nesplyne se sloupcem OK vedle. */
+input.priloha-zaskrtavatko,
+table.husta input.priloha-zaskrtavatko {
+  border-radius: var(--radius-xs);
+  --pico-border-color: var(--border-policko-priloha);
+  border-color: var(--border-policko-priloha);
+}
+input.priloha-zaskrtavatko:checked,
+table.husta input.priloha-zaskrtavatko:checked,
+input.priloha-zaskrtavatko:checked:active,
+input.priloha-zaskrtavatko:checked:focus {
+  --pico-background-color: var(--status-info);
+  --pico-border-color: var(--status-info);
+  border-color: var(--border-policko-priloha);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgb(255,255,255)' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.5 11.5 12 20a5.2 5.2 0 0 1-7.4-7.4l8.6-8.6a3.5 3.5 0 0 1 4.9 4.9l-8.5 8.5a1.8 1.8 0 0 1-2.5-2.5l7.8-7.8'/%3E%3C/svg%3E");
+  background-size: .8rem auto;
+}
+
+/* Vyber "patri k" pod sponkou. Sloupec Priloha je uzky, tak ma vyber
+   vlastni sirku a mensi pismo - jinak by roztahl tabulku o nazvy dokladu.
+   Sirka se dava jen v tabulce: v lupe je tenhle vyber v sirsim panelu.
+   Bez JavaScriptu je videt vzdy, s nim az u zaskrtnute prilohy. */
+/* `:not([hidden])` tu musi byt: `display: block` v silnejsim zapisu by prebilo
+   `[hidden] { display: none }` a schovany vyber by svitil dal. */
+table.husta select.priloha-k:not([hidden]) {
+  display: block;
+  width: 100%;
+  max-width: 9rem;
+  margin: .3rem auto 0;
+  font-size: var(--pismo-tabulka-mala);
+}
+
+/* ---- Nahled v tabulce otevira lupu ---- */
+.nahled-odkaz {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+.nahled-lupa {
+  position: absolute;
+  right: .15rem;
+  bottom: .15rem;
+  padding: 0 .2rem;
+  border-radius: var(--radius-xs);
+  background: rgba(14, 26, 52, .68);
+  color: #fff;
+  font-size: .75rem;
+  line-height: 1.3;
+}
+.nahled-odkaz:hover .nahled-lupa { background: var(--kormorani-blue); }
+
+/* ---- Lupa: kontrola uctenky pres celou obrazovku ----------------------
+   Vlevo dve tretiny sken, vpravo tretina udaje od AI. Cely smysl je moct
+   porovnat naskenovanou uctenku s tim, co z ni prectla AI, aniz by clovek
+   uhybal ocima po siroke tabulce.
+
+   Z <dialog> dela celoobrazovkovy prekryv uz Pico - tady se meni jen barva
+   podkladu (tmava, aby bila uctenka vynikla) a vypln. */
+dialog.lupa {
+  padding: 1.1rem;
+  background-color: rgba(14, 26, 52, .82);
+}
+.lupa-mrizka {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  width: 100%;
+  height: 100%;
+  max-width: 100rem;
+  margin: 0 auto;
+}
+.lupa-sken {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Bez `min-height: 0` by obrazek mrizku roztahl pres spodni hranu okna
+     a sipky by skoncily mimo obrazovku. */
+  min-height: 0;
+  padding: 0 3.4rem;
+  /* Priblizeni skenu: sken se meni jen `transform`em uvnitr teto plochy.
+     `touch-action: none` bere prohlizeci gesto dvou prstu (jinak by zoomoval
+     celou stranku) a nechava ho nam; `overscroll-behavior` totez pro kolecko. */
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: contain;
+  user-select: none;
+}
+.lupa-sken.priblizeno { cursor: grab; }
+.lupa-sken.priblizeno.tahne-se { cursor: grabbing; }
+.lupa-obrazek {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+  transform-origin: 50% 50%;
+  -webkit-user-drag: none;
+}
+/* Obrazek, ktery se teprve nacita, je jen utlumeny (zbyva na nem predchozi
+   uctenka) a pres nej je napsano, co se deje. Kdyz se nahled nepovedl,
+   neukazuje se vubec - at nikdo nekontroluje udaje podle papiru te predchozi. */
+.lupa-sken.nacita-se .lupa-obrazek { opacity: .2; }
+.lupa-sken.chyba-nahledu .lupa-obrazek { visibility: hidden; }
+.lupa-stav {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: .5rem 1rem;
+  border-radius: var(--radius-pill);
+  background: rgba(14, 26, 52, .85);
+  color: #fff;
+  text-align: center;
+}
+/* Sipky sedi po stranach skenu, at je na ne blizko odkudkoli z obrazku.
+   Totez umi klavesove sipky vlevo/vpravo (viz js/lupa.js). */
+.lupa-sipka {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.25rem;
+}
+.lupa-sipka:hover { transform: translateY(-50%); }
+.lupa-drive { left: 0; }
+.lupa-pozdeji { right: 0; }
+/* Prepinani stranek uvnitr jedne vicestranne uctenky. U jednostrankovych
+   je cely pruh schovany atributem `hidden`. */
+.lupa-stranky {
+  position: absolute;
+  bottom: .1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .25rem .5rem;
+  border-radius: var(--radius-pill);
+  background: rgba(14, 26, 52, .8);
+  color: #fff;
+  font-size: .78rem;
+  white-space: nowrap;
+}
+.lupa-stranky button { min-height: 1.5rem; padding: 0 .5rem; }
+/* Ovladani priblizeni nahore uprostred skenu - zrcadlo prepinani stranek.
+   Sipky, stranky a stav musi lezet NAD priblizenym obrazkem (ten ma `transform`
+   a bez z-indexu by je prekryl). */
+.lupa-zoom {
+  position: absolute;
+  top: .1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .25rem .5rem;
+  border-radius: var(--radius-pill);
+  background: rgba(14, 26, 52, .8);
+  color: #fff;
+  font-size: .78rem;
+  white-space: nowrap;
+}
+.lupa-zoom button { min-height: 1.5rem; padding: 0 .5rem; margin: 0; }
+.lupa-zoom button:disabled { opacity: .45; }
+.lupa-sipka, .lupa-stranky, .lupa-stav, .lupa-zoom, .lupa-zavrit-cela { z-index: 2; }
+/* Krizek v rohu skenu: ukazuje se jen na telefonu v rezimu "cela obrazovka". */
+dialog.lupa button.lupa-zavrit-cela { display: none; }
+
+.lupa-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mezera-md);
+  padding: 1.25rem 1.35rem;
+  /* Roluje vnitrek, ne cely panel - prepinace v paticce tak zustanou videt
+     i u uctenky s dlouhou poznamkou. */
+  overflow: hidden;
+}
+.lupa-obsah {
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  overflow-y: auto;
+}
+.lupa-hlavicka {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.lupa-nazev {
+  display: block;
+  color: var(--text-heading);
+  word-break: break-word;
+}
+.lupa-pozice { display: block; color: var(--text-muted); }
+.lupa-hlavicka button { min-height: 2rem; width: 2rem; min-width: 2rem; }
+
+.lupa-pole { display: grid; gap: .5rem; }
+.lupa-pole-radek { display: grid; gap: .1rem; }
+.lupa-pole-radek > span {
+  font-size: .75rem;
+  color: var(--text-muted);
+}
+.lupa-pole-radek :is(input, select) {
+  margin-bottom: 0;
+  padding: .3rem .55rem;
+  font-size: .92rem;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+.lupa-poznamky {
+  font-size: .78rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.lupa-poznamky > * { display: block; }
+
+/* Paticka drzi u spodni hrany panelu, at je "Zkontrolovano" vzdycky na
+   stejnem miste, at uz ma uctenka poznamek kolik chce. */
+.lupa-paticka {
+  margin-top: auto;
+  display: grid;
+  gap: .45rem;
+  text-align: center;
+}
+.lupa-prepinac { width: 100%; margin-bottom: 0; }
+/* Vypnuty prepinac je jen obrys - zapnuty je plny. Barva nese vyznam stejne
+   jako v tabulce: modra = priloha, zelena = zkontrolovano, cervena = jeste ne. */
+.lupa-prepinac[aria-pressed="false"] {
+  background-image: none;
+  background-color: rgba(255, 255, 255, .62);
+  border-color: transparent;
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+.lupa-ok[aria-pressed="false"] { color: var(--cervena-text); }
+.lupa-priloha[aria-pressed="false"] { color: #005E93; }
+.lupa-ok[aria-pressed="true"] {
+  background-color: var(--kormorani-green);
+  border-color: var(--kormorani-green);
+  background-image: linear-gradient(168deg, #0DA24E, var(--kormorani-green) 62%);
+  color: #fff;
+}
+.lupa-ok[aria-pressed="true"]::before { content: "✓ "; }
+.lupa-priloha[aria-pressed="true"] {
+  background-color: var(--status-info);
+  border-color: var(--status-info);
+  background-image: linear-gradient(168deg, #2A9BD6, var(--status-info) 62%);
+  color: #fff;
+}
+.lupa-original { font-size: .78rem; }
+/* Napoveda ke klavesam. Drzi se pri zemi - je to pripominka pro toho, kdo uz
+   lupu otevrel, ne nabidka, ktera ma prebijet prepinace nad ni. */
+.lupa-napoveda {
+  color: var(--text-muted);
+  font-size: .75rem;
+  line-height: 1.55;
+}
+.lupa-napoveda strong { color: var(--text-body); }
+
+/* Na uzkem displeji se sken a panel poskladaji pod sebe - vedle sebe by
+   z obojiho zbyl proužek. */
+@media (max-width: 62rem) {
+  .lupa-mrizka { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .lupa-panel { max-height: 46vh; }
+  .lupa-sken { padding: 0 2.8rem; }
+}
+
+/* Telefon: lupa uctenek. Sken ma nejvys tretinu vysky obrazovky, zbytek
+   dostava panel s udaji (driv z nej byl videt proužek). Klepnuti na sken
+   (js/lupa.js) pridá `lupa-cela` - sken pak zabere celou obrazovku a panel se
+   schova. Tlacitka +/-/100 % a napoveda ke klavesam se tu schovavaji (prsty a
+   dvojklik zoomuji dal); na pocitaci zustavaji. Galerie technickeho prukazu
+   (`.galerie`) sdili tridy lupy, ale tady se jí to netyka. */
+@media (max-width: 37.5rem) {
+  dialog.lupa:not(.galerie) { padding: .6rem; }
+  dialog.lupa:not(.galerie) .lupa-mrizka {
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: .6rem;
+  }
+  dialog.lupa:not(.galerie) .lupa-sken { height: 33vh; height: 33dvh; }
+  dialog.lupa:not(.galerie) .lupa-zoom,
+  dialog.lupa:not(.galerie) .lupa-napoveda { display: none; }
+  dialog.lupa:not(.galerie) .lupa-panel {
+    max-height: none;
+    min-height: 0;
+    gap: .5rem;
+    padding: .8rem .9rem;
+  }
+  dialog.lupa:not(.galerie) .lupa-obsah { flex: 1 1 auto; min-height: 0; }
+  /* Prepinace vedle sebe na jednom radku, zhruba poloviční. */
+  dialog.lupa:not(.galerie) .lupa-paticka {
+    grid-template-columns: 1fr 1fr;
+    gap: .35rem;
+  }
+  dialog.lupa:not(.galerie) .lupa-original { grid-column: 1 / -1; }
+  dialog.lupa:not(.galerie) .lupa-prepinac {
+    min-height: 0;
+    padding: .3rem .4rem;
+    font-size: .78rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  /* Klepnutim roztazeny sken: cela obrazovka, panel pryc. */
+  dialog.lupa.lupa-cela:not(.galerie) .lupa-mrizka { grid-template-rows: minmax(0, 1fr); }
+  dialog.lupa.lupa-cela:not(.galerie) .lupa-sken { height: 100%; }
+  dialog.lupa.lupa-cela:not(.galerie) .lupa-panel { display: none; }
+  /* Bez okraje: klepnuti vedle skenu by dialog zavrelo a omylem odeslo pryc ze stranky. */
+  dialog.lupa.lupa-cela:not(.galerie) { padding: 0; }
+  dialog.lupa.lupa-cela:not(.galerie) .lupa-sken { padding: 0; }
+  /* Zavreni: kulate tlacitko 44 px v pravem hornim rohu skenu,
+     tmave s bilym krizkem (kontrast i na bile uctence). */
+  dialog.lupa.lupa-cela:not(.galerie) button.lupa-zavrit-cela {
+    display: inline-flex;
+    position: absolute;
+    top: .6rem;
+    right: .6rem;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    margin: 0;
+    font-size: 1.6rem;
+    border-color: transparent;
+    background: rgba(14, 26, 52, .85);
+    color: #fff;
+  }
+}
+
+/* ---- Technicky prukaz u vozidla ----------------------------------------
+   Nahled je velky zhruba jako policko s nazvem auta vedle - na mensim by
+   nebylo poznat, jestli je na fotce ta spravna strana knizecky. Krizek sedi
+   v rohu nahledu, aby bylo jasne, kterou z fotek maze. */
+.technicak {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .6rem;
+}
+.technicak-foto { position: relative; display: inline-block; }
+img.nahled.technicak-nahled {
+  width: 7.5rem;
+  height: 4.5rem;
+  max-height: none;
+  object-fit: cover;
+  object-position: center;
+  border-radius: var(--radius-xs);
+}
+button.technicak-smazat {
+  position: absolute;
+  top: -.45rem;
+  right: -.45rem;
+}
+/* Prouzek na pridani dalsi strany - stejne vysoky jako nahled, ale uzky, aby
+   sloupec s pruhazem nerostl do sirky. Carkovany jako plocha na pretahovani
+   souboru u uctenek. Skutecne policko na soubor je pres nej natazene
+   a pruhledne, takze kliknuti kamkoli otevre vyber. */
+.technicak-pridat {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 4.5rem;
+  margin: 0;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-xs);
+  background: var(--glass-light);
+  color: var(--text-muted);
+  line-height: 1.1;
+  cursor: pointer;
+}
+.technicak-pridat > span { font-size: 1.5rem; }
+.technicak-pridat:hover,
+.technicak-pridat:focus-within { border-color: var(--kormorani-blue); color: var(--text-body); }
+.technicak-pridat input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ---- Seznam vozidel: bloky, ktere jdou pretahovat ----
+   Kazde auto je vlastni sklenena karta. Nadpisy sloupcu lezi nad nimi primo
+   na pozadi a drzi se stejne mrizky, takze sloupce licuji, i kdyz to neni
+   tabulka. Poradi auta ukazuje cislo vpravo, meni se tazenim za uchyt
+   vlevo (js/vozidla.js). */
+.vozidla-seznam {
+  --vozidla-sloupce: 2rem minmax(12rem, 3fr) 8rem 5.5rem minmax(19rem, 2fr) 3.5rem 2.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  margin-bottom: var(--mezera-md);
+}
+.vozidlo-hlavicka,
+.vozidlo-blok {
+  display: grid;
+  grid-template-columns: var(--vozidla-sloupce);
+  align-items: center;
+  column-gap: .9rem;
+  padding-inline: .6rem 1.1rem;
+}
+.vozidlo-hlavicka {
+  font-size: var(--pismo-tabulka);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.vozidlo-blok {
+  padding-block: .7rem;
+  font-size: var(--pismo-tabulka);
+}
+/* Bez min-width: 0 by policko v mrizce nekleslo pod svou prirozenou sirku
+   a na uzke obrazovce by blok pretekl. */
+.vozidlo-blok > * { min-width: 0; }
+.vozidlo-blok label { margin: 0; }
+.vozidlo-blok input:not([type="file"]) { margin: 0; }
+.vozidlo-popisek { display: none; }
+.vozidlo-cislo {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.vozidlo-smazat { display: flex; justify-content: center; }
+.vozidlo-smazat button { margin: 0; }
+
+button.vozidlo-uchyt {
+  width: 2rem;
+  min-width: 2rem;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: grab;
+  /* Bez tohohle by prst na mobilu misto tazeni posouval strankou. */
+  touch-action: none;
+}
+/* Behem tazeni: vsechny bloky i volne misto, kam auto dopadne, maji
+   carkovany obrys. Linka je bila, protoze lezi vne skla, na tmavem pozadi. */
+.vozidla-seznam.razeni-bezi .vozidlo-blok:not(.vozidlo-v-ruce) {
+  outline: 2px dashed rgba(255, 255, 255, .7);
+  outline-offset: 3px;
+}
+.vozidlo-misto {
+  border: 2px dashed rgba(255, 255, 255, .7);
+  border-radius: var(--radius-lg);
+}
+.vozidlo-blok.vozidlo-v-ruce {
+  position: fixed;
+  z-index: 60;
+  margin: 0;
+  box-shadow: var(--sklo-lem), 0 22px 48px -10px rgba(8, 18, 40, .55);
+  transform: scale(1.012);
+  cursor: grabbing;
+}
+.vozidlo-v-ruce button.vozidlo-uchyt { cursor: grabbing; }
+body.razeni-bezi { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+
+/* Na uzke obrazovce se sloupce do radku nevejdou: nazev s uchytem a cislem
+   nahore, pod nim SPZ se spotrebou, pak pruhaz. Nadpisy sloupcu se schovaji
+   a kazde policko dostane vlastni popisek. */
+@media (max-width: 56rem) {
+  .vozidlo-hlavicka { display: none; }
+  .vozidlo-blok {
+    grid-template-columns: 2rem 1fr 1fr auto;
+    grid-template-areas:
+      "uchyt nazev nazev cislo"
+      ".     spz   spotreba spotreba"
+      ".     tp    tp    tp"
+      ".     pouziti pouziti smazat";
+    row-gap: .6rem;
+  }
+  .vozidlo-uchyt-bunka { grid-area: uchyt; }
+  .vozidlo-nazev { grid-area: nazev; }
+  .vozidlo-spz { grid-area: spz; }
+  .vozidlo-spotreba { grid-area: spotreba; }
+  .vozidlo-technicak { grid-area: tp; }
+  .vozidlo-pouziti { grid-area: pouziti; text-align: left; }
+  .vozidlo-smazat { grid-area: smazat; }
+  .vozidlo-cislo { grid-area: cislo; }
+  .vozidlo-popisek {
+    display: block;
+    margin-bottom: .2rem;
+    font-size: var(--pismo-tabulka-mala);
+    color: var(--text-muted);
+  }
+  .vozidlo-nazev .vozidlo-popisek { display: none; }
+}
+
+/* ---- Galerie technickych prukazu pres celou obrazovku ----
+   Tmave pozadi a sipky bere z lupy (dialog.lupa, .lupa-sipka). Nahore
+   sklenena lista s nazvem, pod ni obrazek pres zbytek okna. */
+.galerie-obal {
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  width: 100%;
+  height: 100%;
+  max-width: 100rem;
+  margin: 0 auto;
+}
+.galerie-lista {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .55rem .6rem .55rem 1.1rem;
+}
+.galerie-lista > div { flex: 1; min-width: 0; }
+.galerie-nazev { color: var(--text-heading); margin-right: .6rem; }
+.galerie-pozice { color: var(--text-muted); }
+.galerie-lista button { min-height: 2rem; width: 2rem; min-width: 2rem; margin: 0; }
+.galerie-plocha {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3.4rem;
+}
+.galerie-obrazek { cursor: zoom-in; }
+/* Priblizeno: obrazek ve skutecne velikosti, plocha se posouva. Sipky by
+   se posouvaly s obsahem, tak se schovaji - listuje se klavesami. */
+.galerie-plocha.priblizeno {
+  display: block;
+  overflow: auto;
+  padding: 0;
+}
+.galerie-plocha.priblizeno .galerie-obrazek {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+.galerie-plocha.priblizeno .lupa-sipka { display: none; }
+@media (max-width: 48rem) {
+  .galerie-plocha { padding: 0 2.8rem; }
+}
+
+/* ---- Vyber lidi do seznamu obdarovanych ----
+   Jmena ve sloupcich, ktere se samy prizpusobi sirce okna. Seznam ucastniku
+   tabora ma pres dvacet radku - pod sebou by z toho byl dlouhy sloupec
+   a tlacitko "Pridat vybrane" by se ztratilo az pod okrajem obrazovky. */
+.vyber-lidi {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: .1rem .9rem;
+  margin-bottom: var(--mezera-md);
+}
+/* Zaskrtavatko a jmeno na jedne care. Pico dava labelu vlastni spodni mezeru,
+   ktera by mrizku rozjela. */
+.volba-cloveka {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0;
+  padding: .15rem 0;
+  cursor: pointer;
+}
+.volba-cloveka input[type="checkbox"] { margin: 0; flex: none; }
+.volba-cloveka small { color: var(--text-muted); }
+
+/* ---- Rozdavani veci obdarovanym ----
+   Vlevo tabulka lidi, vpravo zasobnik veci, ktere jeste nikdo nedostal.
+   Zasobnik zustava pri scrollovani na obrazovce (`sticky`) - tabulka ma
+   pres dvacet radku a bez toho by clovek tahal karticku po pameti. */
+.rozdavani {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: var(--mezera-lg);
+  align-items: start;
+}
+/* Pod uzkym oknem se zasobnik posune pod tabulku. Pretahovani na dotek
+   stejne nefunguje, takze tam zbyva klikaci cesta - a ta sirku nepotrebuje. */
+@media (max-width: 60rem) {
+  .rozdavani { grid-template-columns: 1fr; }
+  aside.zasobnik { position: static; }
+}
+.rozdavani > form { margin-bottom: 0; min-width: 0; }
+
+aside.zasobnik {
+  position: sticky;
+  top: var(--mezera-md);
+  padding: var(--mezera-md);
+}
+aside.zasobnik h3 { font-size: .95rem; margin-top: 0; }
+aside.zasobnik form { margin-bottom: var(--mezera-md); }
+aside.zasobnik > small { display: block; margin-top: var(--mezera-md); color: var(--text-muted); }
+.zasobnik-veci {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-content: flex-start;
+  min-height: 4rem;
+  /* Dlouhy zasobnik (padesat veci) by jinak vytlacil stranku do vysky
+     a sticky by ztratil smysl. */
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.zasobnik-prazdny { color: var(--text-muted); font-size: .9rem; margin: 0; }
+
+/* Karticka jedne veci. Sklo se sem uz nedava - lezela by na skle zasobniku
+   a dve pruhledne vrstvy pres sebe daji bily papir. */
+.dar {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .3rem .2rem .55rem;
+  border-radius: var(--radius-sm, .5rem);
+  background: rgba(255, 255, 255, .82);
+  box-shadow: 0 0 0 1px rgba(18, 41, 76, .12), 0 1px 2px rgba(18, 41, 76, .10);
+  font-size: .85rem;
+  line-height: 1.25;
+  cursor: grab;
+  /* Text v karticce se pri tazeni nesmi zacit vybirat - jinak misto veci
+     prohlizec tahne oznaceny text. */
+  user-select: none;
+}
+.dar:hover { background: #fff; }
+.dar-taha-se { opacity: .45; cursor: grabbing; }
+/* Vybrana karticka ceka, kam se klikne. Zluta je barva hlavni akce - tady
+   drzi videt, se kterou veci se prave pracuje. */
+.dar-vybrany {
+  box-shadow: 0 0 0 2px var(--kormorani-yellow), 0 1px 6px rgba(18, 41, 76, .18);
+}
+/* Nazev veci je <span role="button">, aby ji slo vybrat z klavesnice.
+   Globalni vzhled `[role="button"]` (tobolka, prechod, stin) by z nej udelal
+   tlacitko uvnitr karticky, proto se tu vraci na obycejny text. */
+.dar .dar-nazev[role="button"],
+.dar .dar-nazev[role="button"]:hover {
+  min-height: 0;
+  padding: .05rem 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  transform: none;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
+  cursor: inherit;
+}
+/* Tlacitko "Dat sem" tlaci doprava, aby nepletlo karticky. */
+.veci-cloveka .dat-sem { margin-left: auto; }
+/* Krizek u karticky je maly, ale porad cerveny - maze nebo odebira. */
+button.dar-pryc {
+  padding: 0 .3rem;
+  font-size: .8rem;
+  line-height: 1.4;
+  border-radius: var(--radius-sm, .5rem);
+}
+
+/* Bunka u cloveka je zaroven mistem, kam se karticka pusti. Musi mit vysku
+   i kdyz je prazdna - do niceho by se trefovalo spatne. */
+.veci-cloveka {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+  align-items: center;
+  min-height: 2.6rem;
+  min-width: 16rem;
+}
+/* Misto, nad kterym karticka prave visi. */
+.prihradka-cil {
+  outline: 2px dashed var(--kormorani-yellow);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm, .5rem);
+}
+
+/* Tabulka rozdeleni: jmeno uzke, veci siroke. */
+table.tabulka-daru { table-layout: auto; }
+table.tabulka-daru td { vertical-align: middle; }
+.jmeno-upravy input { margin-bottom: .25rem; }
+.jmeno-upravy input:last-child { margin-bottom: 0; }
+
+/* ---- Seznam uctenek za vecne dary v bloku cteni ---- */
+.seznam-uctenek-daru {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--mezera-md);
+}
+.seznam-uctenek-daru li {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .2rem 0;
+  font-size: .9rem;
+}
+.seznam-uctenek-daru .uctenka-nazev {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Rozdeleni uctenky po kategoriich ------------------------------------ */
+/* Uctenka, na ktere je vedle jidla i material. Rozbaluje se pod selectem
+   kategorie v tabulce ucteneka a zustava drobna - je to upresneni radku,
+   ne dalsi radek. */
+.rozdeleni {
+  margin-top: .3rem;
+  border: none;
+}
+.rozdeleni > summary {
+  cursor: pointer;
+  color: var(--pico-muted-color);
+}
+.rozdeleni .rozdeleni-radky {
+  width: 100%;
+  margin: .3rem 0;
+}
+.rozdeleni .rozdeleni-radky :is(td, th) {
+  padding: .25rem .3rem;
+  border: none;
+  vertical-align: middle;
+}
+.rozdeleni .rozdeleni-radky :is(input, select) {
+  margin: 0;
+  padding: .1rem .35rem;
+  font-size: max(.8em, var(--pismo-nejmensi));
+  height: auto;
+  border-radius: var(--radius-xs);
+}
+/* Rozpis kategorii pod ucelem platby v pokladni knize. Castky uz jsou
+   zapocitane v radku nad nim, tohle je jen vypis. */
+.kniha-casti {
+  display: block;
+  color: var(--pico-muted-color);
+}
+
+/* ---- Jen cteni (role revizor) -------------------------------------------
+   Zapis odmita uz server (app/auth.py:zapis_jen_pro_editory) - tohle je jen
+   pohodli, aby revizor nezkousel klikat na neco, co stejne skonci chybou
+   403. Filtr v Logu cinnosti a podobne GET formulare se techle pravidel
+   netykaji - miri jen na `method="post"`.
+   Formular s tridou `vzdy-aktivni` se vynechava: je to odhlaseni a vlastni
+   profil (jmeno, e-mail, heslo), ktere server revizorovi dovoluje - routa
+   `/profil` je mimo `zapis_jen_pro_editory`. Bez toho by se revizor nemohl
+   odhlasit ani zmenit heslo. */
+body.jen-cteni form[method="post"]:not(.vzdy-aktivni) :is(button, [type="submit"]),
+body.jen-cteni button[form] {
+  display: none;
+}
+body.jen-cteni form[method="post"]:not(.vzdy-aktivni) :is(input, select, textarea) {
+  pointer-events: none;
+}
+/* Pole vypada jako obycejny text. Zaskrtavatko to nesmi: jeho stav (zkontrolovano,
+   priloha, dochazka) je ctena informace a kolecko bez vyplne a obrysu by ho
+   schovalo (K-167, uzavrena akce stejny rezim pouziva). */
+body.jen-cteni form[method="post"]:not(.vzdy-aktivni) :is(input:not([type="checkbox"]), select, textarea) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+/* Pole zamcene sablonou (uzavrena akce) Pico tlumi na pul pruhlednosti, coz je
+   text zbytecne tmavy na cteni; tady je jen ke cteni, ne "nedostupne". */
+body.jen-cteni form[method="post"]:not(.vzdy-aktivni) :is(input, select, textarea):disabled {
+  opacity: 1;
+}
+
+/* ---- Log cinnosti --------------------------------------------------------
+   Zelena se tu nepouziva schvalne - v teto aplikaci znamena "v poradku" a
+   log zadny stav nehlasi. Modra = zmena, cervena = smazani, stejne jako
+   v grafu i v casove ose. */
+
+.aktivita-sloupce {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(.5rem, 1fr);
+  align-items: end;
+  gap: .3rem;
+  height: 7rem;
+  margin: 0 0 var(--mezera-sm);
+  padding: 0;
+  list-style: none;
+}
+.aktivita-sloupce li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+.aktivita-sloupce .sloupec {
+  display: flex;
+  flex-direction: column-reverse;
+  width: 100%;
+  margin-top: auto;
+  border-radius: 2px 2px 0 0;
+  overflow: hidden;
+}
+.aktivita-sloupce .cast-zmeny,
+.aktivita-sloupce .cast-smazani {
+  width: 100%;
+  min-height: 0;
+}
+.aktivita-sloupce .cast-zmeny {
+  height: calc(var(--zmeny, 0) / var(--max, 1) * 5.5rem);
+  background: var(--kormorani-blue);
+}
+.aktivita-sloupce .cast-smazani {
+  height: calc(var(--smazani, 0) / var(--max, 1) * 5.5rem);
+  /* Smazani se od zmen nepozna jen barvou: sraf funguje i bez rozliseni cervene
+     a modre. */
+  background: repeating-linear-gradient(
+    135deg, var(--status-danger) 0 3px, #fff 3px 5px
+  );
+}
+/* Text jen pro ctecku obrazovky: na obrazovce neni videt, ve strome stranky je. */
+.jen-pro-cteni {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.aktivita-sloupce small { font-size: .75rem; color: var(--text-muted); margin-top: .2rem; }
+
+.log-den { margin-bottom: var(--mezera-lg); }
+.log-den h3 { margin-bottom: .6rem; }
+.log-den h3 small { font-weight: 400; color: var(--text-muted); }
+
+.log-polozky { list-style: none; margin: 0; padding: 0; }
+.log-polozka {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  padding: .5rem 0;
+  border-top: 1px solid rgba(20, 42, 80, .08);
+}
+.log-polozka:first-child { border-top: none; }
+/* Cerveny prouzek u smazani - stejny jazyk jako nezkontrolovana uctenka. */
+.log-polozka.typ-smazani {
+  border-left: 3px solid var(--status-danger);
+  padding-left: .5rem;
+  margin-left: -.75rem;
+}
+.log-cas {
+  flex-shrink: 0;
+  width: 3.6rem;
+  padding-top: .2rem;
+  font-size: .8rem;
+  color: var(--text-muted);
+}
+.log-obsah { flex: 1; min-width: 0; }
+.log-obsah .stitek { margin-right: .3rem; }
+
+.log-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  font-size: .75rem;
+  font-weight: 700;
+  color: #fff;
+}
+.log-avatar.barva-0 { background: #2A4983; }
+.log-avatar.barva-1 { background: #B71F1F; }
+.log-avatar.barva-2 { background: #1F7A4C; }
+.log-avatar.barva-3 { background: #8A5A00; }
+.log-avatar.barva-4 { background: #5B3E96; }
+.log-avatar.barva-5 { background: #0E7C86; }
+.log-avatar.barva-6 { background: #A8456B; }
+.log-avatar.barva-7 { background: #4A4A4A; }
+
+/* Filtr: na pocitaci je <details> napevno otevreny a jeho tlacitko schovane, takze
+   je videt jen formular jako driv. Pico dava <details> okraj a odsazeni -
+   tady nic z toho nechceme. */
+.log-filtr {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.log-filtr > summary { display: none; }
+.log-rozbalit { display: none; }
+
+/* ---- Telefon: Log cinnosti je kratky a prehledny ----
+   Dlazdice po dvou (posledni pres celou sirku), nadpis vlevo a cislo vpravo
+   jako u dlazdic na prehledu akce; filtr v rozbalovaci nabidce; zaznam
+   na jeden radek (cas, stitek, zkraceny popis), cely text po klepnuti.
+   Radek se zkracuje a rozbaluje jen kdyz bezi JavaScript (`html.js`) - bez nej
+   je cely text videt a nic se nerozbaluje. Pocitac (od 37,5 rem) beze zmeny. */
+@media (max-width: 37.5rem) {
+  .log-dlazdice {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--mezera-sm);
+    margin-bottom: var(--mezera-md);
+  }
+  .log-dlazdice > article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: .5rem;
+    row-gap: 0;
+    padding: .6rem .8rem;
+  }
+  .log-dlazdice > article:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .log-dlazdice h3 { margin: 0; font-size: .85rem; }
+  .log-dlazdice .velke { margin: 0; font-size: 1.35rem; line-height: 1.2; }
+  .log-dlazdice small { grid-column: 1 / -1; font-size: .75rem; }
+
+  .log-filtr-karta { padding: 0; }
+  .log-filtr > summary {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    min-height: 2.75rem;
+    margin: 0;
+    padding: 0 var(--mezera-md);
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-heading);
+  }
+  .log-filtr > summary::after { margin-left: auto; }
+  .log-filtr-pocet { font-weight: 400; color: var(--text-muted); }
+  .log-filtr > form { margin: 0; padding: 0 var(--mezera-md) var(--mezera-md); }
+
+  .log-den { margin-bottom: var(--mezera-md); }
+  .log-den h3 { font-size: 1rem; }
+
+  .js .log-avatar { display: none; }
+  .js .log-polozka {
+    align-items: center;
+    gap: .5rem;
+    padding: 0;
+    min-height: 2.75rem;
+  }
+  .js .log-polozka.typ-smazani { padding-left: .5rem; }
+  .js .log-cas { width: 2.9rem; padding-top: 0; }
+  .js .log-obsah {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    padding-block: .5rem;
+    font-size: .9rem;
+  }
+  .js .log-obsah .stitek { flex-shrink: 0; margin-right: 0; }
+  .js .log-kdo,
+  .js .log-akce,
+  .js .log-pocet { display: none; }
+  .js .log-popis {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* U zaznamu s akci je za odkazem dvojtecka a popis (jeden kus textu, aby se na
+     pocitaci nic neposunulo); ve zkracenem radku se dvojtecka s mezerou odsune
+     mimo orezany prvek: ": " je v pismu aplikace presne pul `em`. */
+  .js .log-popis.s-akci { text-indent: -.5em; }
+  .js .log-rozbalit {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    min-height: 2.75rem;
+    margin: 0 -.5rem 0 0;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    color: var(--text-heading);
+  }
+  .js .log-rozbalit::before {
+    content: "";
+    width: .55rem;
+    height: .55rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform .16s ease;
+  }
+  .js .log-polozka.rozbaleno { align-items: flex-start; }
+  .js .log-polozka.rozbaleno .log-cas { padding-top: .6rem; }
+  .js .log-polozka.rozbaleno .log-obsah { display: block; }
+  .js .log-polozka.rozbaleno .log-obsah .stitek { margin-right: .3rem; }
+  .js .log-polozka.rozbaleno .log-kdo,
+  .js .log-polozka.rozbaleno .log-akce,
+  .js .log-polozka.rozbaleno .log-pocet { display: inline; }
+  .js .log-polozka.rozbaleno .log-popis { overflow: visible; white-space: normal; text-indent: 0; }
+  .js .log-polozka.rozbaleno .log-rozbalit::before { transform: translateY(2px) rotate(-135deg); }
+}
+
+/* ---- Telefon: Prehled akci bez posunu do strany a mensi formular Nova akce ----
+   Tabulka akci se na telefonu nevejde, tak je radek nazev, termin, stav a sipka;
+   zbytek (vyuctovani, vydaje, prijmy, balance) se ukaze po klepnuti (js/akce_seznam.js).
+   Rozhodnuti K-146 (siroka tabulka se posouva v ramecku) tim pro prehled akci padlo.
+   Radek se zkracuje jen kdyz bezi JavaScript (`html.js`) - bez nej je tabulka jako
+   driv. Pocitac (od 37,5 rem) beze zmeny: tlacitko se sipkou je na nem schovane. */
+.akce-rozbalit-bunka { display: none; }
+
+@media (max-width: 37.5rem) {
+  .js .akce-tabulka,
+  .js .akce-tabulka tbody { display: block; }
+  .js .akce-tabulka thead { display: none; }
+  .js .akce-radek {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    column-gap: .5rem;
+    padding-inline: var(--vnitrni-okraj-telefon);
+    border-bottom: 1px solid var(--pico-muted-border-color);
+    cursor: pointer;
+  }
+  .js .akce-radek > td { padding: 0; border: none; background: none; }
+  /* Nasledujici pravidla musi mit silu aspon jako `> td` vyse, jinak se padding zrusi. */
+  .js .akce-radek > .akce-nazev { grid-column: 1; grid-row: 1; padding-top: .75rem; min-width: 0; }
+  .js .akce-nazev a { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .js .akce-radek > .akce-stav { grid-column: 2; grid-row: 1; padding-top: .75rem; }
+  .js .akce-radek > .akce-termin { grid-column: 1; grid-row: 2; padding-bottom: .75rem; font-size: .85rem; color: var(--text-muted); white-space: nowrap; }
+  .js .akce-rozbalit-bunka { display: block; grid-column: 3; grid-row: 1 / span 2; }
+  .js .akce-detail { display: none; }
+  .js .akce-rozbalit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    min-height: 2.75rem;
+    margin: 0 -.5rem 0 0;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    color: var(--text-heading);
+  }
+  .js .akce-rozbalit::before {
+    content: "";
+    width: .55rem;
+    height: .55rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform .16s ease;
+  }
+  .js .akce-radek.rozbaleno .akce-detail {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    gap: .5rem;
+    padding-bottom: .25rem;
+    font-size: .9rem;
+  }
+  .js .akce-radek.rozbaleno .akce-detail::before {
+    content: attr(data-popisek);
+    color: var(--text-muted);
+  }
+  .js .akce-radek.rozbaleno .akce-termin { padding-bottom: .25rem; }
+  .js .akce-radek.rozbaleno .akce-detail:last-of-type { padding-bottom: .75rem; }
+  .js .akce-radek.rozbaleno .akce-rozbalit::before { transform: translateY(2px) rotate(-135deg); }
+
+  /* Formular Nova akce: pole pod sebou, datum od a do vedle sebe. Vnejsi okraj je
+     spolecny (`--okraj-telefon`, Z8) - karta uz neni uzsi nez ostatni bloky. */
+  .nova-akce {
+    margin-inline: 0;
+    padding: 1rem;
+  }
+  .nova-akce form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .6rem;
+  }
+  .nova-akce label { grid-column: 1 / -1; font-size: .8rem; min-width: 0 !important; margin: 0; }
+  .nova-akce label:has(input[type="date"]:not([name="datum_vyuctovani"])) { grid-column: auto; }
+  .nova-akce input,
+  .nova-akce .radek > label > select {
+    height: 2.25rem;
+    margin-top: .15rem;
+    padding: .25rem .5rem;
+    font-size: .85rem;
+  }
+  .nova-akce button[type="submit"] { grid-column: 1 / -1; min-height: 2.5rem; padding-block: .3rem; }
+}
+
+/* ---- Telefon: seznam s oknem na upravy radku ----
+   Siroka tabulka se na telefonu nevejde, tak se radek zkrati na nazev a hodnotu
+   (`.okno-otevrit`) a klepnuti otevre <dialog> s ostatnimi polickami (js/okno.js).
+   Policka se do okna presouvaji, ne kopiruji, takze zustavaji ve stejnem formulari
+   a prubezne ukladani funguje jako v tabulce. Vsechno krome zakladu nize je jen
+   v bloku pro telefon (do 37,5 rem, stejna hranice je v js/okno.js); pocitac se
+   nemeni - kratky radek a text tlacitka Smazat jsou na nem schovane. */
+.okno-kratky,
+.okno-text { display: none; }
+
+@media (max-width: 37.5rem) {
+  /* S JavaScriptem (`.okno-aktivni` pridava js/okno.js): kazdy radek je jedno klikaci
+     tlacitko, policka v bunkach jsou schovana (po otevreni okna jsou v nem). */
+  .okno-aktivni .okno-tabulka,
+  .okno-aktivni .okno-tabulka tbody,
+  .okno-aktivni .okno-tabulka tr { display: block; }
+  .okno-aktivni .okno-tabulka { overflow: hidden; }  /* podbarveni radku pod zaoblenim */
+  .okno-aktivni .okno-tabulka thead,
+  .okno-aktivni .okno-tabulka td[data-okno-pole],
+  .okno-aktivni .okno-tabulka td[data-okno-akce] { display: none; }
+  .okno-aktivni .okno-tabulka td.okno-kratky { display: block; padding: 0; }
+
+  .okno-otevrit {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    width: 100%;
+    min-height: 3.25rem;
+    margin: 0;
+    padding: .6rem 1rem;
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    color: var(--text-body);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+  }
+  .okno-otevrit:hover,
+  .okno-otevrit:active {
+    transform: none;
+    background-color: rgba(255, 255, 255, .55);
+    box-shadow: none;
+  }
+  .okno-nazev {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .okno-hodnota {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  /* Sipka vpravo rika, ze radek se da otevrit. */
+  .okno-otevrit::after {
+    content: "";
+    flex: none;
+    width: .5rem;
+    height: .5rem;
+    margin-left: .25rem;
+    border-top: 2px solid var(--text-muted);
+    border-right: 2px solid var(--text-muted);
+    transform: rotate(45deg);
+  }
+  /* Revizor smi okno otevrit a precist (pole v nem jsou jen ke cteni); pravidlo
+     pro revizora (`body.jen-cteni ... button`) by tlacitka jinak schovalo. */
+  body.jen-cteni form[method="post"]:not(.vzdy-aktivni) button.okno-otevrit { display: flex; }
+  body.jen-cteni form[method="post"]:not(.vzdy-aktivni) button.okno-zavrit { display: inline-flex; }
+
+  /* Bez JavaScriptu: tabulka se rozlozi pod sebe, kazde pole ma popisek nad sebou. */
+  form[data-okno-seznam]:not(.okno-aktivni) .okno-tabulka,
+  form[data-okno-seznam]:not(.okno-aktivni) .okno-tabulka tbody,
+  form[data-okno-seznam]:not(.okno-aktivni) .okno-tabulka tr,
+  form[data-okno-seznam]:not(.okno-aktivni) .okno-tabulka td:not(.okno-kratky) { display: block; }
+  form[data-okno-seznam]:not(.okno-aktivni) .okno-tabulka thead { display: none; }
+  form[data-okno-seznam]:not(.okno-aktivni) .okno-tabulka td[data-okno-pole]::before {
+    content: attr(data-okno-pole);
+    display: block;
+    color: var(--text-muted);
+    font-size: .85rem;
+  }
+
+  /* Okno. Overlay dela Pico (cely <dialog>), panel je <article> uvnitr. */
+  /* Okno je 80 % obrazovky na sirku i vysku a pozadi za nim je tmave jako zbytek
+     appky: Pico by dalo pres stranku svetly rozmazany zaves a sklo na nem pusobilo
+     jako bily papir. Panel zustava sklem (`article`), zaves se jen ztlumi. */
+  dialog.okno-radku {
+    background-color: rgba(12, 24, 48, .5);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  dialog.okno-radku > article {
+    display: flex;
+    flex-direction: column;
+    width: 80vw;
+    max-width: none;
+    max-height: 80dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  /* Za oknem se stranka neposouva. */
+  html:has(dialog.okno-radku[open]) { overflow: hidden; }
+  .okno-hlavicka {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .5rem .5rem .5rem 1.25rem;
+    border-bottom: var(--pico-border-width) solid var(--pico-muted-border-color);
+  }
+  .okno-hlavicka h3 { margin: 0; min-width: 0; overflow-wrap: anywhere; font-size: 1.1rem; }
+  .okno-zavrit {
+    flex: none;
+    width: auto;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    margin: 0;
+    padding-inline: 1.1rem;
+  }
+  .okno-telo {
+    overflow-y: auto;
+    padding: 1rem 1.25rem .25rem;
+  }
+  .okno-telo > label,
+  .okno-telo > .okno-pole { margin: 0 0 .75rem; }
+  .okno-popisek {
+    display: block;
+    color: var(--text-muted);
+    font-size: .85rem;
+    font-weight: 600;
+  }
+  .okno-telo :is(input, select) { width: 100%; margin: .25rem 0 0; }
+  .okno-paticka { padding: .25rem 1.25rem 1.25rem; }
+  .okno-paticka:empty { display: none; }
+  /* Vic tlacitek v jedne bunce akce (Pozvat, Odpojit, Smazat) je vedle sebe a zalamuji se. */
+  .okno-paticka > div { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .okno-paticka button {
+    width: auto;
+    min-height: 2.75rem;
+    margin: 0;
+    padding: .4rem 1.25rem;
+    font-size: .92rem;
+  }
+  /* V okne misto krizku stoji text. */
+  .okno-paticka .okno-krizek { display: none; }
+  .okno-paticka .okno-text { display: inline; }
+
+  /* Zaskrtavatko v okne zustane zaskrtavatkem, ne polem pres celou sirku. */
+  .okno-telo input[type="checkbox"] { width: 1.5rem; height: 1.5rem; margin: .35rem 0 0; }
+
+  /* Seznam s nahledem (ucenky): radek je nahled vlevo a kratke tlacitko vedle nej.
+     Nahled zustava mimo okno, aby z nej slo dal otevrit lupu (js/lupa.js). */
+  .okno-aktivni .okno-tabulka.okno-s-nahledem tr { display: flex; align-items: center; }
+  .okno-aktivni .okno-tabulka.okno-s-nahledem td.okno-nahled {
+    display: block;
+    flex: none;
+    padding: .65rem 0 .65rem var(--vnitrni-okraj-telefon);
+  }
+  .okno-aktivni .okno-tabulka.okno-s-nahledem td.okno-nahled img.nahled {
+    width: 2.5rem;
+    max-height: 3rem;
+    margin: 0;
+  }
+  .okno-aktivni .okno-tabulka.okno-s-nahledem td.okno-nahled small { display: none; }
+  .okno-aktivni .okno-tabulka.okno-s-nahledem td.okno-kratky { flex: 1 1 auto; min-width: 0; }
+  /* Vysvetlivky pod polem (jistota od AI, poznamka, rozpis po strankach). Zamerne bez
+     `display`: `small.jistota-vysoka` je schovana a silnejsi zapis by ji odkryl. */
+  .okno-telo small,
+  .okno-telo details { margin-top: .3rem; font-size: .85rem; }
+  /* Rozpis po kategoriich v okne: tri sloupce se do uzkeho okna nevejdou,
+     kazda cast je pod sebou (kategorie, castka, popis). */
+  .okno-telo .rozdeleni-radky,
+  .okno-telo .rozdeleni-radky tbody,
+  .okno-telo .rozdeleni-radky tr,
+  .okno-telo .rozdeleni-radky td { display: block; width: 100%; }
+  .okno-telo .rozdeleni-radky tr { padding: .25rem 0 .5rem; border-bottom: 1px solid var(--pico-muted-border-color); }
+  .okno-telo .rozdeleni-radky tr[hidden] { display: none; }
+
+  /* Vozidla (blok auta misto tabulky): v radku zustane uchyt na preskupovani a kratke
+     tlacitko (nazev, SPZ), vse ostatni je v okne. Cislo poradi se nezobrazuje, poradi
+     je videt z polohy. Pole v okne nemaji svuj popisek podruhe (.vozidlo-popisek). */
+  .okno-aktivni .vozidlo-blok {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    grid-template-areas: "uchyt kratky";
+    row-gap: 0;
+    padding-block: .1rem;
+    padding-inline: .25rem 0;
+  }
+  .okno-aktivni .vozidlo-blok [data-okno-pole],
+  .okno-aktivni .vozidlo-blok [data-okno-akce],
+  .okno-aktivni .vozidlo-blok .vozidlo-cislo { display: none; }
+  .okno-aktivni .vozidlo-blok > .okno-kratky { display: block; grid-area: kratky; }
+  /* Nazev auta byva dlouhy, proto je SPZ pod nim a sipka vedle obou, ne vedle sebe. */
+  .okno-aktivni .vozidlo-blok .okno-otevrit {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "nazev sipka" "spz sipka";
+    column-gap: .75rem;
+    row-gap: 0;
+    min-height: 3.5rem;
+  }
+  .okno-aktivni .vozidlo-blok .okno-nazev { grid-area: nazev; }
+  .okno-aktivni .vozidlo-blok .okno-hodnota {
+    grid-area: spz;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+    font-size: .85rem;
+    font-weight: 400;
+  }
+  .okno-aktivni .vozidlo-blok .okno-otevrit::after { grid-area: sipka; align-self: center; }
+  .okno-telo .vozidlo-popisek { display: none; }
+  .okno-telo .technicak { margin-top: .25rem; }
+}
+
+/* ---- Telefon (Z8, kolo 2): posuvne husté tabulky (ucastnici, dochazka, dary) ----
+   Prvni a posledni bunka maji od hrany skla jen 10 px; stejne vnitrni odsazeni jako
+   radky a karty jinde (`--vnitrni-okraj-telefon`). Tabulky prevedene na karty
+   a seznamy s oknem maji vlastni pravidla, proto jsou vyloucene. */
+@media (max-width: 37.5rem) {
+  .siroka-tabulka > table.husta:not(.kniha, .cestak-jizdy-tabulka, .okno-tabulka) :is(th, td):first-child {
+    padding-inline-start: var(--vnitrni-okraj-telefon);
+  }
+  .siroka-tabulka > table.husta:not(.kniha, .cestak-jizdy-tabulka, .okno-tabulka) :is(th, td):last-child {
+    padding-inline-end: var(--vnitrni-okraj-telefon);
+  }
+}
+
+/* ---- Telefon: husta tabulka se radeji posouva, nez aby se policka mackala ----
+   Tabulka je v `.siroka-tabulka` (posuvny obal), takze ji nic nenuti zuzit
+   policka pod citelnou sirku. Jen na uzkem displeji - na pocitaci by se
+   siroke tabulky zbytecne roztahovaly. */
+@media (max-width: 44rem) {
+  .siroka-tabulka > table input[type="text"],
+  .siroka-tabulka > table input:not([type]) { min-width: 8rem; }
+  .siroka-tabulka > table input.cislo,
+  .siroka-tabulka > table input[type="number"] { min-width: 5rem; }
+  .siroka-tabulka > table select:not([hidden]) { min-width: 9rem; }
+}
+
+/* ---- Telefon: karty Pridat radek a Vratka v pokladni knize co nejmensi ----
+   Pet poli pod sebou zabirala vic nez obrazovku. Pole jsou v mrizce po dvou:
+   ucel (nebo ucastnik) pres celou sirku, pod nim datum a pohyb (u vratky datum
+   a castka), pod nimi castka s tlacitkem. Vysvetlujici text pod formularem se
+   na telefonu schova (je v dokumentaci a na pocitaci). Pocitac (od 37,5 rem)
+   beze zmeny. `min-width: 0` prebije `min-width: 100%` z pravidla `.radek > label`
+   pro 34 rem - v mrizce by pole jinak pretekalo svou bunku. */
+@media (max-width: 37.5rem) {
+  article.pridavani-kniha { padding: .75rem var(--vnitrni-okraj-telefon); margin-bottom: .6rem; }
+  article.pridavani-kniha h3 { margin-bottom: .35rem; font-size: 1.05rem; }
+  article.pridavani-kniha > small { display: none; }
+  article.pridavani-kniha form.radek {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: .3rem .6rem;
+    align-items: end;
+    margin: 0;
+  }
+  article.pridavani-kniha form.radek > label {
+    min-width: 0;
+    margin: 0;
+    font-size: .8rem;
+  }
+  article.pridavani-kniha form.radek > button { grid-column: 2; width: 100%; }
+  /* Pridat radek: ucel | datum, pohyb | castka, tlacitko. */
+  form.kniha-pridat > label:nth-child(2) { grid-column: 1 / -1; grid-row: 1; }
+  form.kniha-pridat > label:nth-child(1) { grid-row: 2; grid-column: 1; }
+  form.kniha-pridat > label:nth-child(3) { grid-row: 2; grid-column: 2; }
+  form.kniha-pridat > label:nth-child(4) { grid-row: 3; grid-column: 1; }
+  form.kniha-pridat > button { grid-row: 3; }
+  /* Vratka: ucastnik pres celou sirku, datum | castka, tlacitko. */
+  form.kniha-vratka > label:nth-child(1) { grid-column: 1 / -1; }
+  form.kniha-vratka > button { grid-column: 1 / -1; }
+}
+
+/* Na 320 az 340 px by v poli Dne zbyl rok oriznuty: policko data ma mensi
+   odsazeni vlevo a mensi pismo. Vpravo zustava misto pro ikonu kalendare. */
+@media (max-width: 21.25rem) {
+  article.pridavani-kniha form.radek input[type="date"] {
+    padding-inline: .35rem 1.7rem;
+    font-size: .8rem;
+  }
+}
+
+/* ---- Telefon: pokladni kniha bez posunu do strany ----
+   Osm sloupcu se na telefon nevejde, tak je kazdy radek karta v mrizce:
+   nahore cislo, datum, doklad a zustatek, pod nimi ucel pres celou sirku,
+   dole castka (Prijem/Vydej s popiskem) a nastroje. Prazdna bunka Prijem nebo
+   Vydej se schova. Rozhodnuti K-146 (siroka tabulka se posouva v ramecku) tim
+   pro pokladni knihu padlo; obal `.siroka-tabulka` zustava, jen uz nema co
+   posouvat. Tuzticka (`.upravuje-se`) funguje dal - pole jsou stale v bunkach.
+   Pocitac (od 37,5 rem) beze zmeny. */
+@media (max-width: 37.5rem) {
+  .siroka-tabulka > table.kniha,
+  .siroka-tabulka > table.kniha tbody { display: block; }
+  .siroka-tabulka > table.kniha thead { display: none; }
+  .siroka-tabulka > table.kniha tr {
+    display: grid;
+    /* Doklad ma vlastni sloupec `auto`, ktery se nikdy nesmrskne: drive byl `1fr`
+       a na 320-375 px mu zbylo 3-11 px. Zbytek (`1fr`) bere zustatek, zarovnany doprava. */
+    grid-template-columns: auto auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "cislo datum doklad zustatek"
+      "ucel ucel ucel ucel"
+      "castka castka nastroje nastroje";
+    align-items: center;
+    gap: .1rem .5rem;
+    padding: .7rem var(--vnitrni-okraj-telefon) .6rem;
+    border-bottom: var(--pico-border-width) solid var(--pico-muted-border-color);
+  }
+  .siroka-tabulka > table.kniha td { display: block; padding: 0; border: none; min-width: 0; }
+  .siroka-tabulka > table.kniha td.kniha-cislo { grid-area: cislo; }
+  /* Datum se nesmi lamat ani smrstit na nulu: sloupec je `auto`, o zbytek se deli doklad. */
+  .siroka-tabulka > table.kniha td.kniha-datum { grid-area: datum; white-space: nowrap; }
+  .siroka-tabulka > table.kniha td.kniha-doklad { grid-area: doklad; }
+  .siroka-tabulka > table.kniha td.kniha-ucel { grid-area: ucel; min-width: 0; }
+  .siroka-tabulka > table.kniha td.kniha-prijem,
+  .siroka-tabulka > table.kniha td.kniha-vydej { grid-area: castka; text-align: left; }
+  .siroka-tabulka > table.kniha td.kniha-prijem:not(:has(.hodnota, .uprava)),
+  .siroka-tabulka > table.kniha td.kniha-vydej:not(:has(.hodnota, .uprava)) { display: none; }
+  .siroka-tabulka > table.kniha td.kniha-zustatek { grid-area: zustatek; font-weight: 600; white-space: nowrap; text-align: right; }
+  /* Horni radek (cislo, datum, doklad, zustatek) je o stupen mensi nez ucel: na 320 px
+     se jinak ctyri udaje nevejdou vedle sebe. Porad to je 14 px (pod 12 px nesmi). */
+  .siroka-tabulka > table.kniha :is(td.kniha-cislo, td.kniha-datum, td.kniha-doklad, td.kniha-zustatek) { font-size: .875rem; }
+  .siroka-tabulka > table.kniha td.kniha-doklad { white-space: nowrap; }
+  /* Tlacitka radku: kulata, 34 px (na 320 px 32 px) misto 40-44 px; mezeru drzi `gap`,
+     ne okraje. Pravidlo je silnejsi nez dotykovy predpis `button.drobne` na konci souboru. */
+  .siroka-tabulka > table.kniha td.nastroje {
+    grid-area: nastroje;
+    display: flex;
+    justify-content: flex-end;
+    gap: .3rem;
+  }
+  .siroka-tabulka > table.kniha td.nastroje > button,
+  .siroka-tabulka > table.kniha td.nastroje > button + button {
+    width: 2.125rem;
+    min-width: 2.125rem;
+    height: 2.125rem;
+    min-height: 2.125rem;
+    padding: 0;
+    margin: 0;
+    font-size: .95rem;
+    line-height: 1;
+  }
+  /* Nejuzsi telefony (320 px): menší mezera mezi sloupci a tlacitka 32 px, jinak by radek
+     presahl sirku bloku (to delal uz pred zvetsenim odsazeni). */
+  @media (max-width: 22.5rem) {
+    .siroka-tabulka > table.kniha tr { column-gap: .3rem; }
+    .siroka-tabulka > table.kniha td.nastroje { gap: .2rem; }
+    .siroka-tabulka > table.kniha td.nastroje > button,
+    .siroka-tabulka > table.kniha td.nastroje > button + button {
+      width: 2rem; min-width: 2rem; height: 2rem; min-height: 2rem;
+    }
+  }
+  .siroka-tabulka > table.kniha td.kniha-prijem::before,
+  .siroka-tabulka > table.kniha td.kniha-vydej::before {
+    content: attr(data-popisek);
+    display: block;
+    font-size: .75rem;
+    color: var(--text-muted);
+  }
+  /* Policka v rezimu upravy se maji vejit do sve bunky (pravidlo pro 44 rem
+     jim dava minimalni sirku 8, 5 a 9 rem). */
+  .siroka-tabulka > table.kniha input,
+  .siroka-tabulka > table.kniha select:not([hidden]) { min-width: 0; margin-bottom: 0; }
+  .siroka-tabulka > table.kniha .upravuje-se { min-width: 0; }
+  /* Radek v rezimu upravy: tri radky pod sebou misto zmacknute mrizky.
+       1. cislo, datum, doklad   2. ucel   3. castka a smer vedle sebe   4. tlacitka vpravo.
+     Zustatek se v uprave schova: po zmene castky se neprepocita, dokud se strana nenacte
+     znovu, tak by ukazoval stary udaj. Selektory maji `td`, aby prebily dotykovy predpis
+     (`min-height: 2.75rem`) na konci souboru. Pismo poli zustava 16 px (Safari na iPhonu
+     jinak pri tuknuti stranku pribliz). */
+  .siroka-tabulka > table.kniha tr.upravuje-se {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "cislo datum doklad"
+      "ucel ucel ucel"
+      "castka castka castka"
+      "nastroje nastroje nastroje";
+    row-gap: .4rem;
+  }
+  .siroka-tabulka > table.kniha tr.upravuje-se td.kniha-zustatek { display: none; }
+  .siroka-tabulka > table.kniha tr.upravuje-se td .uprava {
+    height: 2.25rem;
+    min-height: 2.25rem;
+    margin: 0;
+    padding: .2rem .6rem;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+  .siroka-tabulka > table.kniha tr.upravuje-se :is(td.kniha-prijem, td.kniha-vydej):has(.uprava) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    row-gap: .1rem;
+  }
+  .siroka-tabulka > table.kniha tr.upravuje-se :is(td.kniha-prijem, td.kniha-vydej)::before { grid-column: 1 / -1; }
+  .siroka-tabulka > table.kniha tr.upravuje-se td select.uprava { width: auto; margin-left: .5rem; padding-inline: .6rem 2rem; }
+  /* Podklad upravy patri celemu radku, ne bunkam, jinak mezi radky mrizky prosvita sklo. */
+  .siroka-tabulka > table.kniha tr.upravuje-se { background: rgba(238, 243, 250, .8); }
+  .js .siroka-tabulka > table.kniha tr.upravuje-se > td { background: none; }
+}
+
+/* ---- Dotykovy displej: ovladaci prvky v tabulkach na 44 px ----
+   Je az na konci souboru schvalne: `button.drobne` (min-height 1.35rem)
+   vyse v souboru ma stejnou silu jako tady a pozdejsi pravidlo vyhrava,
+   takze by tyhle predpisy v bloku u `.drobne` neplatily. */
+@media (pointer: coarse) {
+  /* Drobna tlacitka (sipky, tuzticka, krizek v tabulkach) maji na mysi 24 px.
+     Prstem se do nich netrefi a krizek lezi hned vedle tuzticky - proto taky
+     mezera mezi nimi. */
+  button.drobne,
+  [role="button"].drobne {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    padding-inline: .7rem;
+  }
+  td.nastroje > button + button,
+  td.nastroje > button + [role="button"] { margin-left: .5rem; }
+  .cestak-jizdy-tabulka td.nastroje > button + button { margin-left: .5rem; }
+  .cestak-jizdy-tabulka td.nastroje button.drobne { padding-inline: .7rem; min-width: 2.75rem; }
+
+  /* Odkazy v menu a policka formularu: stejna vyska jako tlacitka. Pismo
+     alespon 16 px, jinak Safari na iPhonu pri tuknuti do policka stranku
+     pribliz. Selektory v tabulkach jsou zamerne silnejsi nez
+     `table.husta select` a `.rozdeleni-radky :is(input, select)` vyse. */
+  .appbar nav a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+  select:not([hidden]) { min-height: 2.75rem; }
+  table input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  table select:not([hidden]),
+  table textarea,
+  table.husta select.priloha-k:not([hidden]),
+  .rozdeleni .rozdeleni-radky select:not([hidden]) { font-size: 1rem; }
+  /* Zaskrtavatko dochazky je v <label>, ktery tvori klikaci plochu cele bunky. */
+  .dochazka label.bunka { display: flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; margin: 0; }
+  .dochazka td input[type="checkbox"] { width: 1.5rem; height: 1.5rem; }
+  /* Ostatni zaskrtavatka (priloha, kontrola, pozvanka...) nemaji kolem sebe
+     <label>, tak aspon dostanou stejnou velikost jako u dochazky. */
+  input[type="checkbox"],
+  table.husta input[type="checkbox"],
+  input[type="radio"] { width: 1.5rem; height: 1.5rem; }
+  button.vozidlo-uchyt { min-width: 2.75rem; }
+}
+
+/* ---- Telefon (Z7, cast 1 a 2): hlavicka cesťáku a zalozeni cesťáku ----
+   Je na konci souboru schvalne: blok pro dotykovy displej (vyse) a pravidlo
+   `.cestak-hlavicka-tuzka` pro 44 rem by jinak vyhraly. Jen telefon (do 37,5 rem),
+   pocitac a tablet beze zmeny.
+   Tuzticka sedi v rohu ramecku a prvni radek (znacka Cesťák) je dost vysoky,
+   aby pod ni nezasahoval zadny text. Popisky souhrnu (Ø spotreba, Cena PHM, Sazba)
+   maji tmavsi barvu nez `--text-muted`: na skle nad modrym pozadim sedely
+   pod 4,5:1 (WCAG AA); meri to e2e test. */
+@media (max-width: 37.5rem) {
+  .cestak-hlavicka { padding: .5rem var(--vnitrni-okraj-telefon) .75rem; }
+  .cestak-hlavicka .cestak-hlavicka-tuzka {
+    position: absolute;
+    top: .5rem;
+    right: .75rem;
+    float: none;
+    margin: 0;
+  }
+  .cestak-hlavicka-znacka { min-height: 2.75rem; margin-bottom: 0; padding-right: 3.25rem; }
+  .cestak-hlavicka-pole { gap: .6rem; }
+  .cestak-hlavicka-pole .hodnota { min-width: 0; overflow-wrap: anywhere; }
+  .cestak-hlavicka-sloupec h3 { margin-top: .5rem; }
+  .cestak-hlavicka-souhrn span { color: var(--text-body); }
+  .cestak-hlavicka-souhrn strong { color: var(--text-heading); }
+
+  /* Zalozeni cesťáku: nadpis na jeden radek, pole ve dvojicich, nizke kolonky. */
+  .pridavani .nadpis-pridavani { font-size: 1.2rem; white-space: nowrap; }
+  article.pridavani:has(> details > .cestak-zalozeni) { padding: .75rem var(--vnitrni-okraj-telefon); }
+  .cestak-zalozeni {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 .6rem;
+    margin-top: .5rem;
+  }
+  .cestak-zalozeni label { font-size: .78rem; margin-bottom: .35rem; min-width: 0; }
+  .cestak-zalozeni input,
+  .cestak-zalozeni select {
+    --pico-form-element-spacing-vertical: .35rem;
+    --pico-form-element-spacing-horizontal: .5rem;
+    font-size: .85rem;
+    margin-bottom: 0;
+    min-width: 0;
+    text-overflow: ellipsis;
+  }
+  /* Poradi poli v sablone: ucel, misto, cestujici, jednotka, vozidlo, opotrebeni,
+     ucetenka, cena, spolucestujici, poznamka. Dvojice dava souvisejici udaje k sobe. */
+  .cestak-zalozeni > label:nth-child(1) { grid-column: 1 / -1; }
+  .cestak-zalozeni > label:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .cestak-zalozeni > label:nth-child(3) { grid-column: 2; grid-row: 2; }
+  .cestak-zalozeni > label:nth-child(5) { grid-column: 1; grid-row: 3; }
+  .cestak-zalozeni > label:nth-child(6) { grid-column: 2; grid-row: 3; }
+  .cestak-zalozeni > label:nth-child(7) { grid-column: 1; grid-row: 4; }
+  .cestak-zalozeni > label:nth-child(8) { grid-column: 2; grid-row: 4; }
+  .cestak-zalozeni > label:nth-child(4) { grid-column: 1; grid-row: 5; }
+  .cestak-zalozeni > label:nth-child(9) { grid-column: 2; grid-row: 5; }
+  .cestak-zalozeni > label:nth-child(10) { grid-column: 1 / -1; grid-row: 6; }
+  .cestak-zalozeni > .tlacitka { grid-row: 7; margin-top: .25rem; }
+
+  /* Seznam cesťáku akce: karta misto sesti sloupcu (K-146 pro tuhle tabulku padlo). */
+  .siroka-tabulka > table.cestaky-seznam,
+  .siroka-tabulka > table.cestaky-seznam tbody { display: block; }
+  .siroka-tabulka > table.cestaky-seznam thead { display: none; }
+  .siroka-tabulka > table.cestaky-seznam tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "ucel ucel" "cestujici nahrada" "vozidlo vozidlo" "zacatek akce";
+    align-items: center;
+    gap: .15rem .6rem;
+    padding: .7rem var(--vnitrni-okraj-telefon);
+    border-bottom: var(--pico-border-width) solid var(--pico-muted-border-color);
+  }
+  .siroka-tabulka > table.cestaky-seznam td { display: block; padding: 0; border: none; min-width: 0; }
+  td.ce-ucel { grid-area: ucel; font-weight: 600; overflow-wrap: anywhere; }
+  td.ce-cestujici { grid-area: cestujici; }
+  td.ce-vozidlo { grid-area: vozidlo; color: var(--text-body); }
+  td.ce-zacatek { grid-area: zacatek; color: var(--text-body); }
+  td.ce-zacatek::before { content: "První jízda: "; }
+  td.ce-nahrada { grid-area: nahrada; text-align: right; font-weight: 600; white-space: nowrap; }
+  td.ce-akce { grid-area: akce; }
+  td.ce-akce a[role="button"] { margin: 0; }
+}
+/* Nejuzsi telefony (320 px): s vnitrnim odsazenim 16 px by se nadpis na jeden radek nevesel. */
+@media (max-width: 22.5rem) {
+  .pridavani .nadpis-pridavani { font-size: 1.05rem; }
+  /* Karty jizd: po zvetseni odsazeni zbyva sloupci 'Km nebo cena' o 5 px mene, nez potrebuje
+     jeho popisek (nowrap, 84 px); proto je mezera mezi sloupci mensi. Pismo popisku se
+     nezmensuje (pod 12 px nesmi, hlida to test_pristupnost). */
+  .siroka-tabulka > table.cestak-jizdy-tabulka tr { column-gap: .15rem; }
+}
+
+/* ---- Telefon (Z7, cast 3): mapa a zadani jizdy bez scrollovani ----
+   Poradi na obrazovce: kratky stav trasy, mapa, hned pod ni policka Z a Do (s
+   hledanim), pod nimi datum a prostredek, nakonec km nebo cena a Pridat. Napoveda
+   k mape se schova (je na pocitaci), mapa je nizsi a policka jsou nizka. Jen telefon
+   (do 37,5 rem), pocitac beze zmeny. Konec souboru kvuli bloku pro dotykovy displej. */
+@media (max-width: 37.5rem) {
+  .cestak-mapa-plocha { gap: .5rem; margin-bottom: .5rem; }
+  .cestak-mapa-sloupec { padding: .75rem var(--vnitrni-okraj-telefon) .5rem; }
+  .mapa-rozlozeni.s-panelem { gap: .4rem; }
+  .mapa-napoveda { display: none; }
+  .mapa-panel { gap: .3rem; }
+  .mapa-volba { flex-wrap: nowrap; gap: .4rem; }
+  .mapa-volba > span { display: none; }
+  .mapa-volba button { flex: 1 1 0; justify-content: center; min-height: 2.5rem; padding-block: .25rem; }
+  .mapa-trasa { font-size: .85rem; margin: 0; }
+  .mapa-trasa.hotovo { font-size: .95rem; }
+  .mapa-panel-tlacitka button { min-height: 2.25rem; padding-block: .2rem; }
+  #mapa-cesty { height: 15rem; }
+  .mapa-atribuce { margin: .2rem 0 0; }
+  .mapa-naseptavac { max-height: 13rem; }
+
+  .cestak-jizdy-sloupec > article.pridavani { padding: .75rem var(--vnitrni-okraj-telefon); margin-bottom: .6rem; }
+  form.radek#jizda-rucne {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "z z" "do do" "datum prostredek" "km tlacitko";
+    gap: .3rem .6rem;
+    align-items: end;
+  }
+  form.radek#jizda-rucne > .jz-z { grid-area: z; }
+  form.radek#jizda-rucne > .jz-do { grid-area: do; }
+  form.radek#jizda-rucne > .jz-datum { grid-area: datum; }
+  form.radek#jizda-rucne > .jz-prostredek { grid-area: prostredek; }
+  form.radek#jizda-rucne > .jz-km { grid-area: km; }
+  form.radek#jizda-rucne > .jz-pridat { grid-area: tlacitko; width: 100%; }
+  form.radek#jizda-rucne > :is(label, .pole-mista) { min-width: 0; margin: 0; font-size: .8rem; }
+  form.radek#jizda-rucne > .pole-mista > label { margin-bottom: .15rem; }
+  form.radek#jizda-rucne input,
+  form.radek#jizda-rucne select {
+    --pico-form-element-spacing-vertical: .4rem;
+    --pico-form-element-spacing-horizontal: .55rem;
+    font-size: .9rem;
+    min-width: 0;
+  }
+  form.radek#jizda-rucne input[type="date"] { padding-inline: .35rem 1.7rem; font-size: .8rem; }
+}
+
+/* ---- Telefon (Z7, cast 4): tabulka jizd cesťaku jako karty ----
+   Osm sloupcu se na telefon nevejde a posuvna tabulka byla nepouzitelna (K-146
+   pro cesťak padlo). Kazda jizda je karta v sestisloupcove mrizce: datum a
+   prostredek, Z a Do, km nebo cena se sazbou a cenou, dole nastroje (sipky,
+   tuzticka, krizek). Hlavicka tabulky je schovana, popisky ukazuje ::before.
+   Tuzticka (`.upravuje-se`) funguje dal: pole jsou stale v bunkach. Konec souboru
+   kvuli bloku pro dotykovy displej. Pocitac (od 37,5 rem) beze zmeny. */
+@media (max-width: 37.5rem) {
+  .siroka-tabulka > table.cestak-jizdy-tabulka,
+  .siroka-tabulka > table.cestak-jizdy-tabulka tbody { display: block; width: 100%; }
+  .siroka-tabulka > table.cestak-jizdy-tabulka thead,
+  .siroka-tabulka > table.cestak-jizdy-tabulka colgroup { display: none; }
+  .cestak-jizdy-tabulka { font-size: .9rem; }
+  .cestak-jizdy-tabulka tr {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas:
+      "datum datum datum prostredek prostredek prostredek"
+      "odkud odkud odkud kam kam kam"
+      "hodnota hodnota sazba sazba cena cena"
+      "nastroje nastroje nastroje nastroje nastroje nastroje";
+    gap: .25rem .6rem;
+    align-items: start;
+    padding: .75rem var(--vnitrni-okraj-telefon);
+    border-bottom: var(--pico-border-width) solid var(--pico-muted-border-color);
+  }
+  .cestak-jizdy-tabulka td {
+    display: block;
+    padding: 0;
+    border: none;
+    min-width: 0;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+  .cestak-jizdy-tabulka td.jd-datum { grid-area: datum; font-weight: 600; }
+  .cestak-jizdy-tabulka td.jd-prostredek { grid-area: prostredek; }
+  .cestak-jizdy-tabulka td.jd-odkud { grid-area: odkud; }
+  .cestak-jizdy-tabulka td.jd-kam { grid-area: kam; }
+  .cestak-jizdy-tabulka td.jd-hodnota { grid-area: hodnota; }
+  .cestak-jizdy-tabulka td.jd-sazba { grid-area: sazba; }
+  .cestak-jizdy-tabulka td.jd-cena { grid-area: cena; font-weight: 600; text-align: right; }
+  .cestak-jizdy-tabulka td.nastroje { grid-area: nastroje; display: flex; justify-content: flex-end; gap: .35rem; padding: 0; }
+  .cestak-jizdy-tabulka td.nastroje > button + button { margin-left: 0; }
+  .cestak-jizdy-tabulka td.nastroje > button { margin-bottom: 0; }
+  .cestak-jizdy-tabulka td.jd-odkud::before,
+  .cestak-jizdy-tabulka td.jd-kam::before,
+  .cestak-jizdy-tabulka td.jd-hodnota::before,
+  .cestak-jizdy-tabulka td.jd-sazba::before,
+  .cestak-jizdy-tabulka td.jd-cena::before {
+    display: block;
+    font-size: .75rem;
+    font-weight: 400;
+    color: var(--text-body);
+  }
+  .cestak-jizdy-tabulka td.jd-odkud::before { content: "Z"; }
+  .cestak-jizdy-tabulka td.jd-kam::before { content: "Do"; }
+  .cestak-jizdy-tabulka td.jd-hodnota::before { content: "Km nebo cena"; }
+  .cestak-jizdy-tabulka td.jd-sazba::before { content: "Sazba"; }
+  .cestak-jizdy-tabulka td.jd-cena::before { content: "Cena"; }
+  /* Policka v rezimu upravy se maji vejit do sve bunky (pravidlo pro 44 rem
+     jim dava minimalni sirku 8, 5 a 9 rem). */
+  .cestak-jizdy-tabulka input,
+  .cestak-jizdy-tabulka select:not([hidden]) { min-width: 0; margin-bottom: 0; }
+  .cestak-jizdy-tabulka input[type="date"] { padding-inline: .4rem 1.7rem; font-size: .85rem; }
+}
+
+/* ---- Prohlizec dokladu na telefonu ----
+   Jen telefon: tlacitko "Priblizit doklad" nad kazdym papirem (js/prohlizec_dokladu.js
+   ho vytvari) otevre papir pres celou obrazovku v puvodni velikosti A4. Mimo telefon
+   je ovladani schovane uplne (`display: none`), takze stranka zustava beze zmeny.
+   Vzhled a ovladani drzi vzor lupy na uctenky: tmavy podklad, kulaty krizek
+   44 px vpravo nahore, pruh s +/- nahore uprostred. Je tady, ne v tisk.css: ten nesmi
+   obsahovat `touch-action` ani `zoom` mimo @media screen (hlida automaticky test). */
+.prohlizec-ovladani { display: none; }
+dialog.prohlizec { padding: 0; border-radius: 0; background-color: rgba(14, 26, 52, .92); }
+/* Plocha se posouva a pribliziuje vlastnim kodem: `touch-action: none` bere
+   prohlizeci gesto dvou prstu (jinak by zoomoval CELOU STRANKU) a nechava ho nam. */
+.prohlizec-plocha {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  padding: 4rem var(--vnitrni-okraj-telefon, 12px) 1.5rem;
+  touch-action: none;
+  overscroll-behavior: contain;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.prohlizec-plocha:focus { outline: none; }
+.prohlizec-plocha:focus-visible { outline: 2px solid var(--focus-obrys); outline-offset: -4px; }
+.prohlizec-papir { width: max-content; margin: 0 auto; }
+.prohlizec-zoom {
+  position: absolute;
+  top: .6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .25rem .4rem;
+  border-radius: var(--radius-pill);
+  background: rgba(14, 26, 52, .85);
+  white-space: nowrap;
+}
+/* Svetle jako kulaty krizek a lupa u uctenek (drive sedomodre na tmavem = vypadaly vypnute). */
+dialog.prohlizec .prohlizec-zoom button {
+  min-height: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  margin: 0;
+  padding: 0 .75rem;
+  border-color: transparent;
+  background: #fff;
+  color: #0e1a34;
+  font-weight: 600;
+}
+dialog.prohlizec .prohlizec-zoom button:disabled { opacity: .4; }
+/* Dialog je mimo tisk: jinak by "Tisk" s otevrenym prohlizecem pridal stranu. */
+@media print { dialog.prohlizec { display: none !important; } }
+dialog.prohlizec button.prohlizec-zavrit {
+  position: absolute;
+  top: .6rem;
+  right: .6rem;
+  z-index: 2;
+  display: inline-flex;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  margin: 0;
+  font-size: 1.6rem;
+  border-color: transparent;
+  background: rgba(14, 26, 52, .85);
+  color: #fff;
+}
+@media screen and (max-width: 37.5rem) {
+  .prohlizec-ovladani { display: flex; }
+  /* Pod otevrenym prohlizecem se stranka neposouva. */
+  html:has(dialog.prohlizec[open]) { overflow: hidden; }
+  /* Tady je papir v puvodni velikosti: zmenseni na strance (`zoom` v tisk.css) se rusi. */
+  .prohlizec-papir .doklad { zoom: 1; margin: 0; }
+}
+
+/* ---- Telefon: karty jizd cesťaku - oddeleni, odezva, klidny rezim cteni ----
+   Jen telefon (do 37,5 rem), tablet a pocitac beze zmeny.
+   1) Jizdy se mici do sebe: kazda karta ma silnejsi spodni caru, kazda druha je jemne
+      podbarvena a mezi nimi je vic vzduchu.
+   2) Odezva: pod mysi (jen kde `hover: hover`, na dotyku bywa :hover "lepivy"), pod prstem
+      (:active) a pri psani do pole (:focus-within) se podklad karty zretelne zesvetli
+      (podklad .7-.8 proti .3 u sudych karet) a dostane jemny modry nadech; text zustava
+      citelny (>= 4,5:1, hlida test).
+   3) Mimo tuzticku se hodnoty ukazuji jako klidny text s carkovanou linkou, jako "pole
+      naprazdno" (skutecna pole zustavaji v DOM, ale schovana - jinak by se do nich dalo
+      omylem psat a klavesnice by do nich skakala). Tuzticka je zobrazi jako vyrazna pole
+      s kratkym prechodem. Barvy: --text-muted na svetlem skle ma kontrast 5,7-6,5:1
+      (namereno; AA chce 4,5:1). */
+@media (max-width: 37.5rem) {
+  .cestak-jizdy-tabulka tr {
+    padding-block: .9rem;
+    border-bottom: 2px solid rgba(31, 51, 99, .22);
+    transition: background-color .2s ease;
+  }
+  .cestak-jizdy-tabulka tr:nth-child(even) { background-color: rgba(255, 255, 255, .3); }
+  .cestak-jizdy-tabulka tr:last-child { border-bottom: none; }
+  .cestak-jizdy-tabulka tr:active,
+  .cestak-jizdy-tabulka tr:focus-within { background-color: rgba(240, 246, 255, .8); }
+  /* V rezimu upravy ma podklad cela karta, ne jednotlive bunky (viz .js tr.upravuje-se > td). */
+  .js .cestak-jizdy-tabulka tr.upravuje-se { background-color: rgba(238, 243, 250, .85); }
+  .js .cestak-jizdy-tabulka tr.upravuje-se > td { background: none; }
+
+  .cestak-jizdy-tabulka td .hodnota {
+    display: block;
+    padding-block: .1rem;
+    border-bottom: 1px dashed rgba(37, 49, 63, .28);
+    color: var(--text-muted);
+    font-weight: 400;
+    min-height: 1.4em;
+  }
+  .cestak-jizdy-tabulka td.jd-datum .hodnota { font-weight: 600; }
+  .cestak-jizdy-tabulka td.jd-sazba { color: var(--text-muted); }
+  /* Po zapnuti uprav pole "naskoci" - kratky prechod misto skoku. */
+  .js .cestak-jizdy-tabulka tr.upravuje-se .uprava { animation: jizda-pole-naskok .22s ease-out; }
+}
+@media (max-width: 37.5rem) and (hover: hover) {
+  .cestak-jizdy-tabulka tr:hover { background-color: rgba(244, 248, 255, .7); }
+  .js .cestak-jizdy-tabulka tr.upravuje-se:hover { background-color: rgba(238, 243, 250, .95); }
+}
+@keyframes jizda-pole-naskok {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .js .cestak-jizdy-tabulka tr.upravuje-se .uprava { animation: none; }
+  .cestak-jizdy-tabulka tr { transition: none; }
+}
+
+/* ---- Nastaveni akce ----
+   Zakladni pravidla jen nahrazuji drivejsi `style=` v sablone (stejne hodnoty, desktop
+   a tablet se nemeni). `.radek > label.trida` ma vyssi sílu nez `.radek > label`, stejne
+   jako driv inline styl. */
+.radek > label.nast-nazev { flex: 2; min-width: 14rem; }
+.radek > label.nast-datum { min-width: 9rem; }
+.radek > label.nast-prefix { min-width: 12rem; }
+.radek > label.nast-pokladnik { flex: 1.5; min-width: 12rem; }
+.radek > label.nast-limit { min-width: 14rem; }
+.radek.nast-odstup-maly { margin-top: 1rem; }
+.radek.nast-odstup-velky { margin-top: 1.5rem; }
+small.nast-napoveda { display: block; margin-top: 1.25rem; }
+small.nast-zabrano { align-self: center; }
+
+/* Telefon: kompaktni nastaveni akce - mensi mezery, nizka policka a tlacitka.
+   Pismo v polich zustava 16 px (`1rem`): pod 16 px iOS Safari pri klepnuti do pole
+   priblizi stranku (stejne rozhodnuti jako v Knize, Z9). Ostatni pismo >= 12 px.
+   Tlacitka maji cil aspon 32 px (jsou 36 px). Vnejsi a vnitrni okraj bloku drzi sdilene
+   promenne (`--okraj-telefon`, `--vnitrni-okraj-telefon`), tady se nemeni.
+   Zamek uzavrene akce (disabled pole, zluty pruh) se nedotyka: jen rozmery. */
+@media (max-width: 37.5rem) {
+  article.nastaveni-akce { padding-block: .8rem; }
+  .nastaveni-akce .radek { gap: .55rem .75rem; }
+  .nastaveni-akce .radek.nast-odstup-maly { margin-top: .55rem; }
+  .nastaveni-akce .radek.nast-odstup-velky { margin-top: .9rem; }
+  .nastaveni-akce label { font-size: .875rem; line-height: 1.3; }
+  .nastaveni-akce label > :is(input, select) { margin-top: .2rem; }
+  /* Dlouhy vyber `input:not()` nize je nutny: dotykovy predpis `min-height: 2.75rem`
+     (konec souboru) ma sílu 0,4,1 a kratsi selektor by ho neprebil. */
+  .nastaveni-akce .radek :is(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+      select:not([hidden])
+  ),
+  .nastaveni-akce label > :is(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+      select:not([hidden])
+  ) {
+    height: 2.375rem;
+    min-height: 0;
+    padding: .25rem .65rem;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  .nastaveni-akce input[type="date"] { padding-inline-end: .5rem; }
+  .nastaveni-akce select { padding-inline-end: 2rem; }
+  .nastaveni-akce :is(button, [role="button"]) {
+    min-height: 2.25rem;
+    padding: .3rem 1rem;
+    font-size: .9rem;
+  }
+  small.nast-napoveda { margin-top: .75rem; line-height: 1.4; }
+  .nastaveni-akce .radek > label > :is(input, select, textarea) + small { margin-top: .15rem; }
+}
+
+/* ---- Telefon: zhusteni karet jizd cesťaku, mensi tlacitka, vyrazna mista Z a Do ----
+   Jen telefon (do 37,5 rem), tablet a pocitac beze zmeny. Vnejsi okraj bloku
+   (`--okraj-telefon`) ani vnitrni odsazeni karty (`--vnitrni-okraj-telefon`) se nemeni,
+   zhustuje se jen svisle: radkovani textu (drive zdedenych 1,5 -> 1,25), mezery mezi
+   radky mrizky a svisle odsazeni karty.
+   Tlacitka sipek, tuzticky a krizku: videt 2,375 rem (38 px, dřív 44 px), ale klikaci plocha
+   zustava 44 px - tvori ji neviditelny `::after` (inset -4 px od vnitrniho okraje = 3 px za ramecek). Mezi tlacitky je
+   mezera 9,6 px, takze se plochy nepřekryvaji (kontrola v e2e testu). Min. cil 32 px.
+   Misto Z a Do ukazuje kam se jede, proto je hodnota tucna, o neco vetsi a tmava
+   (`--text-body` #25313F, na nejtmavsim skle > 9:1); popisek "Z"/"Do" zustava maly (12 px).
+   Dlouhy nazev se lame diky `overflow-wrap: anywhere` z bloku Z7. */
+@media (max-width: 37.5rem) {
+  .cestak-jizdy-tabulka tr {
+    padding-block: .55rem;
+    row-gap: .2rem;
+  }
+  .cestak-jizdy-tabulka td { line-height: 1.25; }
+  .cestak-jizdy-tabulka td::before { line-height: 1.2; margin-bottom: .05rem; }
+  .cestak-jizdy-tabulka td .hodnota {
+    padding-block: .05rem;
+    min-height: 0;
+    line-height: 1.25;
+  }
+  /* Mista: vyraznejsi nez ostatni hodnoty (pozdejsi a silnejsi pravidlo nez `.hodnota` vyse). */
+  .cestak-jizdy-tabulka td:is(.jd-odkud, .jd-kam) .hodnota {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-body);
+  }
+  .cestak-jizdy-tabulka tr td.nastroje { gap: .6rem; }
+  .cestak-jizdy-tabulka tr td.nastroje > button.drobne {
+    position: relative;
+    width: 2.375rem;
+    min-width: 2.375rem;
+    height: 2.375rem;
+    min-height: 2.375rem;
+    margin: 0;
+    padding: 0;
+  }
+  .cestak-jizdy-tabulka tr td.nastroje > button.drobne::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+  }
+}

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block titulek %}Vozidla{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/okno.js') }}?v={{ verze('js/okno.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/soubory.js') }}?v={{ verze('js/soubory.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/vozidla.js') }}?v={{ verze('js/vozidla.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+<h1>Vozidla</h1>
+<p>Číselník aut, kterými se jezdí na akce. Na cestovním příkazu se pak auto jen vybere ze seznamu.</p>
+
+{# Pridat auto a nahrat technicak smi kazdy, kdo zapisuje (cestak bez vozidla
+   nevznikne). Upravit, preradit a smazat smi jen spravce - server to vynucuje
+   (JEN_SPRAVCE v routes/vozidla.py), tady se jen neukazuji ovladaci prvky. #}
+{% set smi_upravit = uzivatel.je_spravce %}
+
+{% if uzivatel.muze_zapisovat %}
+<article class="pridavani">
+  <form method="post" action="/vozidla/pridat" class="radek">
+    <label style="flex:3">Název
+      <input type="text" name="nazev" placeholder="Škoda Octavia - modrá" required
+             value="{{ stav_formulare.hodnota('nazev') }}"{{ stav_formulare.atributy('nazev') }}>
+      {{ stav_formulare.napoveda('nazev') }}
+    </label>
+    <label style="flex:1">SPZ
+      <input type="text" name="spz" placeholder="1AB 2345"
+             value="{{ stav_formulare.hodnota('spz') }}"{{ stav_formulare.atributy('spz') }}>
+      {{ stav_formulare.napoveda('spz') }}
+    </label>
+    <label style="flex:1">Spotřeba (l/100 km)
+      <input type="text" name="spotreba" inputmode="decimal" placeholder="6,0"
+             value="{{ stav_formulare.hodnota('spotreba') }}"{{ stav_formulare.atributy('spotreba') }}>
+      {{ stav_formulare.napoveda('spotreba') }}
+    </label>
+    <button type="submit" class="zlute">Přidat</button>
+  </form>
+</article>
+{% endif %}
+
+{% if vozidla %}
+  {# Na telefonu je z kazdeho auta kratky radek (nazev, SPZ) a klepnuti otevre okno s polickami,
+     technickym prukazem a tlacitkem Smazat (js/okno.js, K-223). Jen pro spravce: ostatni maji
+     bloky bez poli. Uchyt na pretahovani zustava v radku. Policka zustavaji v tomhle formulari
+     (uklada se tlacitkem Ulozit). #}
+  {% if smi_upravit %}<form method="post" action="/vozidla/ulozit"
+        data-okno-seznam data-okno-nadpis="Upravit vozidlo">{% endif %}
+    {# Kazde auto je vlastni skleneny blok. Za uchyt vlevo se chyti a pretahne
+       nahoru nebo dolu, nove poradi se hned ulozi (js/vozidla.js). Bez
+       JavaScriptu je uchyt obycejne tlacitko, ktere auto posune o jedno misto
+       nahoru. Radek s nadpisy sedi na stejne mrizce jako bloky pod nim. #}
+    <div class="vozidla-seznam" data-razeni="/vozidla/poradi">
+      <div class="vozidlo-hlavicka" aria-hidden="true">
+        <span></span>
+        <span>Název</span>
+        <span>SPZ</span>
+        <span class="cislo">Spotřeba (l/100 km)</span>
+        <span>Technický průkaz</span>
+        <span class="cislo">Použití</span>
+        <span></span>
+        <span></span>
+      </div>
+      {% for v in vozidla %}
+        <div class="vozidlo-blok" data-vozidlo="{{ v.id }}"{% if smi_upravit %} data-okno-radek{% endif %}>
+          <span class="vozidlo-uchyt-bunka">
+            {% if smi_upravit %}
+              <button type="submit" form="poradi_vozidel" name="nahoru" value="{{ v.id }}"
+                      class="duch vozidlo-uchyt"
+                      title="Chyť a přetáhni nahoru nebo dolů (nebo šipkami na klávesnici)"
+                      aria-label="Přesunout „{{ v.nazev }}“">⠿</button>
+            {% endif %}
+          </span>
+          <label class="vozidlo-nazev"{% if smi_upravit %} data-okno-pole="Název"{% endif %}>
+            <span class="vozidlo-popisek">Název</span>
+            {% if smi_upravit %}
+              <input type="text" name="nazev_{{ v.id }}" value="{{ v.nazev }}" aria-label="Název">
+            {% else %}
+              <span>{{ v.nazev }}</span>
+            {% endif %}
+          </label>
+          <label class="vozidlo-spz"{% if smi_upravit %} data-okno-pole="SPZ"{% endif %}>
+            <span class="vozidlo-popisek">SPZ</span>
+            {% if smi_upravit %}
+              <input type="text" name="spz_{{ v.id }}" value="{{ v.spz or '' }}" aria-label="SPZ">
+            {% else %}
+              <span>{{ v.spz or '' }}</span>
+            {% endif %}
+          </label>
+          <label class="vozidlo-spotreba"{% if smi_upravit %} data-okno-pole="Spotřeba (l/100 km)"{% endif %}>
+            <span class="vozidlo-popisek">Spotřeba (l/100 km)</span>
+            {% if smi_upravit %}
+              <input type="text" name="spotreba_{{ v.id }}" class="cislo" inputmode="decimal"
+                     value="{{ v.spotreba|desetinne }}" aria-label="Spotřeba (l/100 km)">
+            {% else %}
+              <span class="cislo">{{ v.spotreba|desetinne }}</span>
+            {% endif %}
+          </label>
+          <div class="vozidlo-technicak"{% if smi_upravit %} data-okno-pole="Technický průkaz"{% endif %}>
+            <span class="vozidlo-popisek">Technický průkaz</span>
+            {# Maly technicak je knizecka - kazda strana je vlastni fotka.
+               Kliknuti na nahled otevre galerii pres celou obrazovku (js/vozidla.js);
+               bez JavaScriptu odkaz otevre puvodni soubor v nove zalozce. #}
+            <div class="technicak">
+              {% for f in v.fotky %}
+                <span class="technicak-foto">
+                  <a href="/vozidla/foto/{{ f.id }}" target="_blank" class="nahled-odkaz"
+                     data-galerie="{{ v.id }}" data-nazev="{{ v.nazev }}"
+                     data-velky="/vozidla/foto/{{ f.id }}/nahled?velky=1&v={{ f.otisk }}"
+                     {# Fotku v plnem rozliseni umi prohlizec ukazat rovnou - pri
+                        priblizeni se nacte ona. PDF a HEIC neumi, tam zustane velky nahled. #}
+                     {% if f.soubor.rsplit(".", 1)[-1] in ("jpg", "jpeg", "png", "webp") %}data-plny="/vozidla/foto/{{ f.id }}"{% endif %}
+                     title="{{ f.puvodni_nazev }} — zvětšit">
+                    <img src="/vozidla/foto/{{ f.id }}/nahled?v={{ f.otisk }}"
+                         alt="technický průkaz, strana {{ loop.index }}" class="nahled technicak-nahled">
+                    <span class="nahled-lupa" aria-hidden="true">⛶</span>
+                  </a>
+                  {% if smi_upravit %}
+                    <button type="submit" form="foto_smazat_{{ f.id }}"
+                            class="kontrast-chyba drobne technicak-smazat"
+                            title="Smazat tuhle fotku technického průkazu"
+                            aria-label="Smazat fotku technického průkazu {{ v.nazev }}, strana {{ loop.index }}">×</button>
+                  {% endif %}
+                </span>
+              {% endfor %}
+              {% if uzivatel.muze_zapisovat %}
+                <label class="technicak-pridat"
+                       title="{{ 'Přidat další stranu technického průkazu' if v.fotky else 'Nahrát technický průkaz' }} — klidně obě strany najednou">
+                  <span aria-hidden="true">+</span>
+                  <input type="file" name="soubory" form="foto_{{ v.id }}" multiple data-odeslat-hned
+                         aria-label="{{ 'Přidat stranu technického průkazu' if v.fotky else 'Nahrát technický průkaz' }}"
+                         accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.webp">
+                </label>
+                <button type="submit" form="foto_{{ v.id }}" class="outline drobne" data-bez-js>Nahrát</button>
+              {% elif not v.fotky %}
+                —
+              {% endif %}
+            </div>
+          </div>
+          <span class="vozidlo-pouziti cislo" title="Na kolika cestovních příkazech je"{% if smi_upravit %} data-okno-pole="Použito na cestovních příkazech"{% endif %}>{{ pouziti.get(v.id, 0) }}×</span>
+          <span class="vozidlo-smazat"{% if smi_upravit %} data-okno-akce{% endif %}>
+            {% if smi_upravit and not pouziti.get(v.id) %}
+              <button type="submit" form="smazat_vozidlo_{{ v.id }}" class="kontrast-chyba drobne"
+                      title="Smazat ze seznamu" aria-label="Smazat vozidlo {{ v.nazev }}"><span class="okno-krizek">×</span><span class="okno-text">Smazat vozidlo</span></button>
+            {% endif %}
+          </span>
+          <span class="vozidlo-cislo" title="Pořadí v nabídce na cestovním příkazu">{{ loop.index }}</span>
+          {% if smi_upravit %}
+            <div class="okno-kratky">
+              <button type="button" class="okno-otevrit" aria-haspopup="dialog">
+                <span class="okno-nazev" data-zrcadlo="nazev_{{ v.id }}">{{ v.nazev }}</span>
+                <span class="okno-hodnota" data-zrcadlo="spz_{{ v.id }}" data-prazdne="bez SPZ">{{ v.spz or 'bez SPZ' }}</span>
+              </button>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% if smi_upravit %}
+    <button type="submit">Uložit</button>
+  </form>
+  {% endif %}
+
+  {# Vnorene formulare HTML nepovoluje, proto stoji az za tabulkou a tlacitka
+     se na ne odkazuji pres atribut `form`. #}
+  {% if smi_upravit %}
+    <form method="post" action="/vozidla/poradi" id="poradi_vozidel"></form>
+  {% endif %}
+  {% for v in vozidla %}
+    {% if smi_upravit %}
+      <form method="post" action="/vozidla/{{ v.id }}/smazat" id="smazat_vozidlo_{{ v.id }}"
+            data-potvrdit="Smazat „{{ v.nazev }}“ ze seznamu vozidel?"></form>
+      {% for f in v.fotky %}
+        <form method="post" action="/vozidla/foto/{{ f.id }}/smazat" id="foto_smazat_{{ f.id }}"
+              data-potvrdit="Smazat {{ loop.index }}. fotku technického průkazu u „{{ v.nazev }}“?"></form>
+      {% endfor %}
+    {% endif %}
+    <form method="post" action="/vozidla/{{ v.id }}/foto" id="foto_{{ v.id }}"
+          enctype="multipart/form-data" data-cekani="Nahrávám technický průkaz…"></form>
+  {% endfor %}
+
+  {# Galerie technickych prukazu pres celou obrazovku - ovlada ji js/vozidla.js. #}
+  <dialog class="lupa galerie" aria-label="Technický průkaz" tabindex="-1">
+    <div class="galerie-obal">
+      <div class="galerie-lista">
+        <div>
+          <strong class="galerie-nazev"></strong>
+          <small class="galerie-pozice"></small>
+        </div>
+        <a class="galerie-original" href="#" target="_blank"><small>Otevřít původní soubor</small></a>
+        <button type="button" class="ikona duch galerie-zavrit" title="Zavřít (Esc)" aria-label="Zavřít">×</button>
+      </div>
+      <div class="galerie-plocha">
+        <button type="button" class="ikona lupa-sipka lupa-drive galerie-drive"
+                title="Předchozí strana (šipka vlevo)" aria-label="Předchozí strana">←</button>
+        <img class="lupa-obrazek galerie-obrazek" src="" alt="Technický průkaz přes celou obrazovku"
+             title="Kliknutím přiblížíš">
+        <button type="button" class="ikona lupa-sipka lupa-pozdeji galerie-dalsi"
+                title="Další strana (šipka vpravo)" aria-label="Další strana">→</button>
+      </div>
+    </div>
+  </dialog>
+{% else %}
+  <p>Zatím tu žádné auto není.{% if uzivatel.muze_zapisovat %} Přidej první výš — pak se objeví v nabídce na cestovním příkazu.{% endif %}</p>
+{% endif %}
+
+<article>
+  <small>
+    <strong>Spotřebu i SPZ opiš z malého technického průkazu</strong> — z těch dvou čísel se
+    počítá náhrada na cestovním příkazu, takže musí souhlasit s papírem. Nahrané fotky
+    technického průkazu (klidně obě strany) jsou k nim doklad; aplikace z nich nic nečte,
+    jen je uschová. Kliknutím na náhled se fotka zvětší přes celou obrazovku.
+    Pořadí aut v nabídce na cestovním příkazu změníš přetažením za úchyt ⠿ vlevo.
+    Auto, které je aspoň na jednom cestovním příkazu, nejde smazat.
+  </small>
+</article>
+{% endblock %}

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="cs" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulek %}Účtování akcí{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', path='kormorani-logo.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', path='pico.min.css') }}?v={{ verze('pico.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v={{ verze('app.css') }}">
+  {# Styly jen pro jednu stranku. Zatim je vyplnuji jen Doklady - tiskove
+     predpisy by v app.css jinde jen prekazely. #}
+  {% block styly %}{% endblock %}
+</head>
+<body class="{% block telo_trida %}{% endblock %}{% if uzivatel and uzivatel.je_revizor %} jen-cteni{% endif %}">
+<header class="container">
+  <nav class="appbar">
+    <a href="/" class="appbar-znacka">
+      <img src="{{ url_for('static', path='kormorani-badge-64.png') }}?v={{ verze('kormorani-badge-64.png') }}" alt="Přístav Kormoráni">
+      <strong>Účtování akcí</strong>
+    </a>
+    {% if uzivatel %}
+    <nav>
+      {# Na telefonu je cela nabidka schovana v <details> (tlacitko "Nabidka"),
+         na pocitaci se rozbali sama a zustane radek odkazu (viz .nabidka v app.css
+         a js/spolecne.js). Bez JavaScriptu jde nabidka na telefonu otevrit take. #}
+      <details class="nabidka">
+      <summary>Nabídka</summary>
+      <ul>
+        {% if uzivatel.je_podepisujici %}
+          <li><a href="/moje-doklady">Moje doklady</a></li>
+        {% else %}
+          <li><a href="/kategorie">Kategorie</a></li>
+          <li><a href="/lide">Lidé</a></li>
+          <li><a href="/vozidla">Vozidla</a></li>
+          {% if uzivatel.je_spravce %}
+            <li><a href="/uzivatele">Uživatelé</a></li>
+            <li><a href="/log">Činnost</a></li>
+            <li><a href="/obnova">Obnova ze zálohy</a></li>
+          {% endif %}
+        {% endif %}
+        <li><a href="/profil">{{ uzivatel.jmeno }}</a>{% if uzivatel.je_revizor %} <span class="stitek">jen čtení</span>{% endif %}</li>
+        <li>
+          {# POST, ne odkaz: odhlaseni meni data (zneplatni prihlaseni na serveru). #}
+          <form method="post" action="/odhlaseni" class="odhlaseni vzdy-aktivni"><button type="submit" class="duch">Odhlásit</button></form>
+        </li>
+      </ul>
+      </details>
+    </nav>
+    {% endif %}
+  </nav>
+</header>
+
+<main class="container"{% if adresa_po_chybe %} data-adresa-po-chybe="{{ adresa_po_chybe }}"{% endif %}>
+  {% if uzivatel and uzivatel.je_revizor %}
+    <article class="oznameni pozor">Jsi přihlášen(a) jako revizor — vidíš všechno, nic nezměníš. Výstupy si můžeš stáhnout.</article>
+  {% endif %}
+  {% if varovani_zalohy %}
+    <article class="oznameni pozor">{{ varovani_zalohy }}</article>
+  {% endif %}
+  {% if varovani_migraci %}
+    <article class="oznameni pozor">{{ varovani_migraci }}</article>
+  {% endif %}
+  {# Hlasky ("Jizda pridana", "Nepodarilo se...") jsou pripichnute vpravo
+     dole, at je clovek vidi, at je na strance kdekoli - nahore ve strance je
+     po odeslani formulare (ktere drzi pozici, viz js/spolecne.js) nikdo nevidel.
+     Zustavaji v <main>, protoze tam plati tmavy text uvnitr skla. Zavirani
+     a mizeni ridi js/spolecne.js; bez JS jsou videt porad. #}
+  <div class="hlasky" aria-live="polite">
+    {% for o in oznameni %}
+      <article class="oznameni {{ o.druh }}" role="{{ 'alert' if o.druh == 'chyba' else 'status' }}">{{ o.text }}</article>
+    {% endfor %}
+  </div>
+  {% block obsah %}{% endblock %}
+</main>
+
+{# Spolecne skripty na kazde strance: spolecne.js musi byt prvni (dava ostatnim
+   `window.appka`); `defer` drzi poradi, v jakem jsou v dokumentu. #}
+<script src="{{ url_for('static', path='js/spolecne.js') }}?v={{ verze('js/spolecne.js') }}" defer></script>
+<script src="{{ url_for('static', path='js/prubezne.js') }}?v={{ verze('js/prubezne.js') }}" defer></script>
+{# Dalsi skripty jedne stranky (js/*.js podle toho, jake prvky stranka ma; hlida
+   to automaticky test) a mapa v cestaku (Leaflet + klikani). #}
+{% block skripty %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block titulek %}Přihlášení{% endblock %}
+{% block telo_trida %}knm-prihlaseni{% endblock %}
+
+{% block obsah %}
+<div class="knm-prihlaseni-panel">
+  <img class="znacka" src="{{ url_for('static', path='kormorani-white.png') }}?v={{ verze('kormorani-white.png') }}" alt="Přístav Kormoráni">
+  <h1>Ahoj</h1>
+  <p class="podnadpis">Přihlas se jménem a heslem.</p>
+
+  {% if not existuje_ucet %}
+    <p class="oznameni chyba">
+      Zatím tu není žádný účet. Spusť v projektu příkaz <code>uv run spravce</code>
+      a založ prvního správce.
+    </p>
+  {% endif %}
+
+  <form method="post" action="/prihlaseni">
+    <label>Jméno nebo e-mail
+      <span class="knm-policko">
+        {# Ikony jsou vepsane primo v sablone, aby prihlaseni nemuselo cekat na
+           zadny dalsi soubor - je to prvni obrazovka, kterou clovek uvidi. #}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"></path>
+        </svg>
+        <input type="text" name="uzivatel" autocomplete="username" autofocus required
+               value="{{ stav_formulare.hodnota('uzivatel') }}"{{ stav_formulare.atributy('uzivatel') }}>
+      </span>
+      {{ stav_formulare.napoveda('uzivatel') }}
+    </label>
+    <label>Heslo
+      <span class="knm-policko">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <rect x="4" y="10" width="16" height="11" rx="3"></rect>
+          <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+        </svg>
+        <input type="password" name="heslo" autocomplete="current-password" required
+               {{- stav_formulare.atributy('heslo') }}>
+      </span>
+      {{ stav_formulare.napoveda('heslo') }}
+    </label>
+    <button type="submit" class="zlute">Přihlásit se</button>
+  </form>
+  <p class="podnadpis"><a href="/zapomenute-heslo">Zapomenuté heslo</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+V aplikaci Účtování akcí nastala chyba.
+
+Čas: {{ cas }}
+Adresa: {{ cesta }}
+Typ chyby: {{ typ }}
+
+Podrobnosti (výpis chyby) jsou v žurnálu serveru:
+journalctl -u uctovani (na serveru jako root).
+Další upozornění o chybě přijde nejdřív za 15 minut.

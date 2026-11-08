@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block titulek %}Složky — {{ akce.nazev }}{% endblock %}
+{% block telo_trida %}{% if akce_uzavrena %}jen-cteni{% endif %}{% endblock %}
+
+{% block obsah %}
+{% with aktivni = 'slozky' %}{% include "akce_menu.html" %}{% endwith %}
+
+{# Vsechna policka patri do jednoho formulare, ktery se uklada prubezne.
+   Tlacitka pro jine akce (roztridit, pridat, zrusit) na nej nesahaji - odkazuji
+   se pres `form="..."` na vlastni formulare uplne dole. #}
+<form method="post" action="/akce/{{ akce.id }}/slozky/ulozit" data-prubezne>
+
+  {% if nezarazene %}
+    <article class="nezarazene">
+      <div class="hlavicka-bloku">
+        <h3>Nezařazené účtenky ({{ nezarazene|length }})</h3>
+        {% if not akce_uzavrena %}<button type="submit" form="roztridit" class="zlute">Roztřídit automaticky</button>{% endif %}
+      </div>
+      <div class="siroka-tabulka">
+      <table class="husta nezarazene-tabulka">
+        <tbody>
+          {% for s in nezarazene %}
+            <tr>
+              <td class="nezarazene-nahled">
+                <a href="/sken/{{ s.id }}/soubor" target="_blank"
+                   aria-label="Otevřít sken účtenky {{ s.nazev or s.puvodni_nazev }}">
+                  <img src="/sken/{{ s.id }}/nahled?v={{ s.otisk }}" alt="" class="nahled maly"
+                       loading="lazy" decoding="async">
+                </a>
+              </td>
+              <td class="nezarazene-nazev">
+                {{ s.nazev or s.puvodni_nazev }}
+                {% if not s.kategorie_id %}
+                  <small class="stitek chyba-stitek">chybí kategorie</small>
+                {% endif %}
+                {% if not s.clovek_id %}
+                  <small class="stitek chyba-stitek">chybí plátce</small>
+                {% endif %}
+              </td>
+              <td class="cislo">{{ s.castka|koruny }}</td>
+              <td class="nezarazene-slozka">
+                <select name="slozka_skenu_{{ s.id }}" aria-label="Složka — {{ s.nazev or s.puvodni_nazev }}" {{ pole_zamcena }}>
+                  <option value="">— nezařazené —</option>
+                  {% for c in akce.slozky %}
+                    <option value="{{ c.id }}">{{ c.nazev }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <small>
+        Doklad je jeden člověk: účtenky jednoho plátce jdou do jedné složky napříč
+        kategoriemi a na dokladu se rozepíšou. Cesťák dostane složku vlastní, i s benzínkami,
+        které se na něj lepí. Na jeden doklad se vejde nejvýš 10 účtenek — víc už se
+        nenacvaká — a co přeteče, odejde do další složky po celých kategoriích.
+        Účtenky bez kategorie nebo bez plátce nechává třídění stranou schválně — ať si
+        jich všimneš a doplníš je, místo aby zapadly do cizí složky.
+      </small>
+    </article>
+  {% endif %}
+
+  {% if muze_psat %}
+  <article>
+    <div class="radek">
+      <label style="flex:1">Název nové složky
+        <input type="text" name="nazev" placeholder="Jídlo - Novák"
+               form="nova-slozka" required>
+      </label>
+      <button type="submit" form="nova-slozka" class="zlute">Přidat složku</button>
+    </div>
+  </article>
+  {% endif %}
+
+  {% if akce.slozky %}
+    <div class="hlavicka-bloku">
+      <h2>Složky ({{ akce.slozky|length }})</h2>
+      {# Sahá i na to, co je uz roztridene - proto varovna barva a dotaz. #}
+      {% if not akce_uzavrena %}
+      <button type="submit" form="pretridit" class="kontrast-chyba drobne">
+        Přetřídit vše od nuly
+      </button>
+      {% endif %}
+    </div>
+    {% for slozka in akce.slozky %}
+      <details class="slozka-karta">
+        <summary>
+          {# Cislo dokladu, pod kterym slozka odejde na papir i do exportu.
+             Slozka se samymi prilohami zadny doklad nema, takze cislo nedostane. #}
+          {% if cisla.get(slozka.id) %}
+            <span class="slozka-cislo">{{ cisla[slozka.id] }}</span>
+          {% endif %}
+          <span class="slozka-nazev">{{ slozka.nazev }}</span>
+          <span class="slozka-meta">
+            {% if slozka.kdo_platil %}{{ slozka.kdo_platil }} · {% endif %}
+            {{ slozka.skeny|length|mnozne('účtenka', 'účtenky', 'účtenek') }}
+          </span>
+          <strong class="slozka-soucet">{{ slozka.soucet|koruny }}</strong>
+        </summary>
+
+        <div class="slozka-telo">
+          <div class="radek">
+            <label style="flex:2">Název složky
+              <input type="text" name="nazev_slozky_{{ slozka.id }}" value="{{ slozka.nazev }}" {{ pole_zamcena }}>
+            </label>
+            {# Vybrane jmeno je to, ktere se natiskne na doklad - tedy
+               `slozka.platic`, ne ulozene `clovek_id`. Ridi ho uctenky uvnitr;
+               pole u slozky nastoupi, teprve kdyz u nich nikdo vyplneny neni
+               nebo kdyz se neshodnou. #}
+            <label style="flex:1">Kdo platil
+              <select name="kdo_slozky_{{ slozka.id }}" {{ pole_zamcena }}>
+                <option value="">—</option>
+                {% for c in lide %}
+                  <option value="{{ c.id }}" {% if slozka.platic and slozka.platic.id == c.id %}selected{% endif %}>{{ c.jmeno }}</option>
+                {% endfor %}
+              </select>
+              <small>Řídí se účtenkami ve složce — tady se to uplatní, jen když u nich nikdo vyplněný není.</small>
+            </label>
+          </div>
+
+          {# Nazev slozky je nazev prihradky na disku. Do kolonky "Ucel platby"
+             na dokladu patri to, co se doopravdy kupovalo - proto vlastni pole.
+             Prazdne = natiskne se navrh, ktery je vidět v našeptávači. #}
+          <label>Účel platby na dokladu
+            <input type="text" name="ucel_slozky_{{ slozka.id }}"
+                   value="{{ slozka.ucel_platby or '' }}"
+                   placeholder="{{ slozka.navrh_ucelu }}" {{ pole_zamcena }}>
+            <small>Prázdné = na doklad se natiskne <strong>{{ slozka.navrh_ucelu }}</strong>.</small>
+          </label>
+
+          <div class="siroka-tabulka">
+          <table class="husta slozka-tabulka">
+            <tbody>
+              {% for s in slozka.skeny %}
+                <tr>
+                  <td class="slozka-nahled">
+                    <a href="/sken/{{ s.id }}/soubor" target="_blank"
+                   aria-label="Otevřít sken účtenky {{ s.nazev or s.puvodni_nazev }}">
+                      <img src="/sken/{{ s.id }}/nahled?v={{ s.otisk }}" alt="" class="nahled maly"
+                       loading="lazy" decoding="async">
+                    </a>
+                  </td>
+                  <td class="slozka-nazev-uctenky">
+                    {{ s.nazev or s.puvodni_nazev }}
+                    {% if s.je_priloha %}
+                      <small class="stitek">
+                        {%- if s.priloha_k %}příloha k: {{ s.priloha_k.nazev or s.priloha_k.puvodni_nazev }}
+                        {%- else %}příloha{% endif -%}
+                      </small>
+                    {% endif %}
+                  </td>
+                  <td class="cislo">{% if not s.je_priloha %}{{ s.castka|koruny }}{% endif %}</td>
+                  <td class="slozka-vyber">
+                    <select name="slozka_skenu_{{ s.id }}" aria-label="Složka — {{ s.nazev or s.puvodni_nazev }}" {{ pole_zamcena }}>
+                      <option value="">— nezařazené —</option>
+                      {% for c in akce.slozky %}
+                        <option value="{{ c.id }}" {% if c.id == slozka.id %}selected{% endif %}>{{ c.nazev }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+
+          {% if not akce_uzavrena %}
+          <button type="submit" form="smazat_slozku_{{ slozka.id }}" class="kontrast-chyba drobne">
+            Zrušit složku
+          </button>
+          {% endif %}
+        </div>
+      </details>
+    {% endfor %}
+  {% elif not nezarazene %}
+    <p>Zatím žádné složky. Nahraj účtenky, nech je načíst a pak klikni na Roztřídit automaticky.</p>
+  {% endif %}
+
+  {% if not akce_uzavrena %}<button type="submit" data-bez-js>Uložit názvy a rozdělení</button>{% endif %}
+</form>
+
+{# Formulare pro jednotlive akce. Jsou prazdne - data nesou tlacitka, ktera se
+   na ne odkazuji pres `form="..."`. Diky tomu nemusi byt vnorene. #}
+{% if not akce_uzavrena %}
+<form method="post" action="/akce/{{ akce.id }}/slozky/roztridit" id="roztridit"></form>
+<form method="post" action="/akce/{{ akce.id }}/slozky/pretridit" id="pretridit"
+      data-potvrdit="Přetřídit celou akci od nuly? Všechny složky se zruší a poskládají znovu podle pravidla — přijdeš o vlastní názvy složek, vepsané účely platby i o ruční přesuny účtenek. Samotné účtenky zůstanou."></form>
+<form method="post" action="/akce/{{ akce.id }}/slozky/nova" id="nova-slozka"></form>
+{% for slozka in akce.slozky %}
+  <form method="post" action="/slozka/{{ slozka.id }}/smazat" id="smazat_slozku_{{ slozka.id }}"
+        data-potvrdit="Zrušit složku „{{ slozka.nazev }}“? Přijdeš o její název a vepsaný účel platby, účtenky se vrátí mezi nezařazené."></form>
+{% endfor %}
+{% endif %}
+{% endblock %}

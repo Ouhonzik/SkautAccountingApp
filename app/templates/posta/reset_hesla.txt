@@ -1,0 +1,10 @@
+Ahoj {{ jmeno }},
+
+někdo (doufáme, že ty) požádal o obnovení hesla do aplikace Účtování akcí.
+Nové heslo si nastavíš na odkazu níže:
+
+{{ odkaz }}
+
+Odkaz platí do {{ platnost }}.
+
+Pokud jsi o to nežádal(a), e-mail ignoruj - heslo zůstane beze změny.

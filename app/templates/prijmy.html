@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block titulek %}Příjmy — {{ akce.nazev }}{% endblock %}
+{% block telo_trida %}{% if akce_uzavrena %}jen-cteni{% endif %}{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/okno.js') }}?v={{ verze('js/okno.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+{% with aktivni = 'prijmy' %}{% include "akce_menu.html" %}{% endwith %}
+
+{% if muze_psat %}
+<article class="pridavani">
+  <h3>Přidat příjem</h3>
+  <form method="post" action="/akce/{{ akce.id }}/prijmy/pridat" class="radek">
+    <label style="flex:2">Popis
+      <input type="text" name="popis" value="{{ stav_formulare.hodnota('popis', 'Účastnické poplatky') }}"
+             {{- stav_formulare.atributy('popis') }}>
+      {{ stav_formulare.napoveda('popis') }}
+    </label>
+    <label style="flex:1">Částka
+      <input type="text" name="castka" placeholder="19200" value="{{ stav_formulare.hodnota('castka') }}"
+             required{{ stav_formulare.atributy('castka') }}>
+      {{ stav_formulare.napoveda('castka') }}
+    </label>
+    <label style="flex:1">Datum přijetí
+      <input type="date" name="datum" value="{{ stav_formulare.hodnota('datum', dnes) }}"
+             {{- stav_formulare.atributy('datum') }}>
+      {{ stav_formulare.napoveda('datum') }}
+    </label>
+    <label style="flex:1">Kdo vybral
+      <select name="clovek"{{ stav_formulare.atributy('clovek') }}>
+        <option value="">—</option>
+        {% for c in lide %}
+          <option value="{{ c.id }}" {% if stav_formulare.hodnota('clovek') == c.id|string %}selected{% endif %}>{{ c.jmeno }}</option>
+        {% endfor %}
+      </select>
+      {{ stav_formulare.napoveda('clovek') }}
+    </label>
+    <button type="submit" class="zlute">Přidat</button>
+  </form>
+  <small>Datum přijetí je den, kdy peníze přišly do pokladny.</small>
+</article>
+{% endif %}
+
+{% if akce.prijmy %}
+  <h2>Přijaté příjmy ({{ akce.prijmy|length }})</h2>
+
+  {# Na telefonu je z kazdeho radku kratky radek (popis, castka) a klepnuti otevre okno
+     s poli (js/okno.js). Policka zustavaji v tomhle formulari, takze se ukladaji
+     prubezne stejne jako v tabulce; na pocitaci se okno nepouziva. #}
+  <form method="post" action="/akce/{{ akce.id }}/prijmy/ulozit" data-prubezne
+        data-okno-seznam data-okno-nadpis="Upravit příjem">
+    <div class="siroka-tabulka">
+      <table class="prijmy-tabulka okno-tabulka">
+        <thead>
+          <tr>
+            <th>Popis</th>
+            <th class="cislo">Částka</th>
+            <th>Datum přijetí</th>
+            <th>Kdo vybral</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in akce.prijmy %}
+            {% set pop = p.popis or 'příjem bez popisu' %}
+            <tr data-okno-radek>
+              <td class="okno-kratky">
+                <button type="button" class="okno-otevrit" aria-haspopup="dialog">
+                  <span class="okno-nazev" data-zrcadlo="popis_{{ p.id }}"
+                        data-prazdne="příjem bez popisu">{{ pop }}</span>
+                  <span class="okno-hodnota" data-zrcadlo="castka_{{ p.id }}"
+                        data-format="koruny">{{ p.castka|koruny }}</span>
+                </button>
+              </td>
+              <td data-okno-pole="Popis"><input type="text" name="popis_{{ p.id }}" value="{{ p.popis }}"
+                         aria-label="Popis příjmu — {{ pop }}" {{ pole_zamcena }}></td>
+              <td data-okno-pole="Částka"><input type="text" name="castka_{{ p.id }}" class="cislo" value="{{ p.castka }}"
+                         aria-label="Částka — {{ pop }}" {{ pole_zamcena }}></td>
+              <td data-okno-pole="Datum přijetí"><input type="date" name="datum_{{ p.id }}"
+                         value="{{ p.datum.isoformat() if p.datum else '' }}"
+                         aria-label="Datum přijetí — {{ pop }}" {{ pole_zamcena }}></td>
+              <td data-okno-pole="Kdo vybral">
+                <select name="kdo_{{ p.id }}" aria-label="Kdo vybral — {{ pop }}" {{ pole_zamcena }}>
+                  <option value="">—</option>
+                  {# Jmeno z doby pred ciselnikem, ktere se v nem nenaslo: zustane vybrane,
+                     dokud nekdo nevybere cloveka (volba "text" = nech to, jak to je). #}
+                  {% if not p.clovek_id and p.kdo %}
+                    <option value="text" selected>{{ p.kdo }} (není v číselníku)</option>
+                  {% endif %}
+                  {% for c in lide %}
+                    <option value="{{ c.id }}" {% if p.clovek_id == c.id %}selected{% endif %}>{{ c.jmeno }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td data-okno-akce>
+                {% if not akce_uzavrena %}
+                {# V okne na telefonu misto krizku stoji text (.okno-krizek / .okno-text). #}
+                <button type="submit" form="smazat_prijem_{{ p.id }}"
+                        class="kontrast-chyba drobne" title="Smazat příjem"
+                        aria-label="Smazat příjem {{ pop }}"><span class="okno-krizek">×</span><span class="okno-text">Smazat příjem</span></button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not akce_uzavrena %}<button type="submit" data-bez-js>Uložit</button>{% endif %}
+  </form>
+
+  {% if not akce_uzavrena %}
+  {% for p in akce.prijmy %}
+    <form method="post" action="/prijem/{{ p.id }}/smazat" id="smazat_prijem_{{ p.id }}"
+          data-potvrdit="Smazat příjem „{{ p.popis or 'bez popisu' }}“? Vrátit to nejde."></form>
+  {% endfor %}
+  {% endif %}
+
+  <h2>Bilance</h2>
+  <article>
+    <table class="souhrn bilance">
+      <tbody>
+        <tr><td>Příjmy celkem</td><td class="cislo">{{ akce.soucet_prijmu|koruny }}</td></tr>
+        <tr><td>Výdaje celkem</td><td class="cislo">{{ akce.soucet_vydaju|koruny }}</td></tr>
+        <tr class="vysledek">
+          <td><strong>Balance sheet</strong></td>
+          <td class="cislo"><strong class="{{ 'kladne' if akce.bilance >= 0 else 'zaporne' }}">{{ akce.bilance|koruny }}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <small>Balance sheet je příjmy minus výdaje — přesně jak to počítá hospodář ve své tabulce.</small>
+  </article>
+{% else %}
+  <p>Zatím žádné příjmy. Typicky sem patří jeden řádek: účastnické poplatky.</p>
+{% endif %}
+{% endblock %}

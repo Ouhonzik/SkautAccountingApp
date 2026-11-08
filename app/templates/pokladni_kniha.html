@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block titulek %}Pokladní kniha — {{ akce.nazev }}{% endblock %}
+{% block telo_trida %}{% if akce_uzavrena %}jen-cteni{% endif %}{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/tabulky.js') }}?v={{ verze('js/tabulky.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+{% with aktivni = 'pokladni_kniha' %}{% include "akce_menu.html" %}{% endwith %}
+
+{# Prepnuti prijem <-> vydej. Sedi vzdycky v te bunce, kde je castka toho radku,
+   at je oboji pohromade. U uctenky se nenabizi: uctenka je v datovem modelu
+   vzdycky vydaj a jeji castka se pocita i do souctu slozky a do Excelu pro
+   hospodare - prepnuta na prijem by kniha se slozkami nesedela. #}
+{% macro prepinac_smeru(r) %}
+  <select class="uprava" name="radek_smer_{{ r.zdroj_id }}" title="Příjem nebo výdej"
+          aria-label="Příjem nebo výdej — řádek {{ r.cislo }}. {{ r.ucel }}" {{ pole_zamcena }}>
+    <option value="vydej" {% if r.smer != 'prijem' %}selected{% endif %}>Výdej</option>
+    <option value="prijem" {% if r.smer == 'prijem' %}selected{% endif %}>Příjem</option>
+  </select>
+{% endmacro %}
+
+{% if pocet_bez_data or pocet_mimo_slozku %}
+  {# Na obou udajich stoji razeni i cislovani dokladu, proto to hlasime cervene. #}
+  <article>
+    <p>
+      <span class="stitek chyba-stitek">Kniha není úplná</span>
+    </p>
+    <ul>
+      {% if pocet_bez_data %}
+        <li>{{ pocet_bez_data|mnozne('řádek nemá', 'řádky nemají', 'řádků nemá') }}
+            datum — řadí se až na konec knihy, takže zůstatek mezitím spadne do mínusu.</li>
+      {% endif %}
+      {% if pocet_mimo_slozku %}
+        <li>{{ pocet_mimo_slozku|mnozne('účtenka není', 'účtenky nejsou', 'účtenek není') }}
+            ve složce — každá dostala vlastní číslo dokladu.</li>
+      {% endif %}
+    </ul>
+    <p class="tlacitka">
+      <a href="/akce/{{ akce.id }}/skeny" role="button" class="outline">Opravit v Účtenkách</a>
+      <a href="/akce/{{ akce.id }}/prijmy" role="button" class="outline">Opravit v Příjmech</a>
+      <a href="/akce/{{ akce.id }}/slozky" role="button" class="outline">Zařadit do složek</a>
+    </p>
+  </article>
+{% endif %}
+
+{% if muze_psat %}
+<article class="pridavani pridavani-kniha">
+  <h3>Přidat řádek</h3>
+  <form method="post" action="/akce/{{ akce.id }}/pokladni-kniha/pridat" class="radek kniha-pridat">
+    <label style="flex:1">Dne
+      <input type="date" name="datum" value="{{ stav_radku.hodnota('datum', dnes) }}"
+             {{- stav_radku.atributy('datum') }}>
+      {{ stav_radku.napoveda('datum') }}
+    </label>
+    <label style="flex:3">Účel platby
+      <input type="text" name="ucel" placeholder="Odvod zůstatku hospodáři"
+             value="{{ stav_radku.hodnota('ucel') }}" required{{ stav_radku.atributy('ucel') }}>
+      {{ stav_radku.napoveda('ucel') }}
+    </label>
+    <label style="flex:1">Pohyb
+      <select name="smer"{{ stav_radku.atributy('smer') }}>
+        <option value="vydej" {% if stav_radku.hodnota('smer', 'vydej') != 'prijem' %}selected{% endif %}>Výdej</option>
+        <option value="prijem" {% if stav_radku.hodnota('smer', 'vydej') == 'prijem' %}selected{% endif %}>Příjem</option>
+      </select>
+      {{ stav_radku.napoveda('smer') }}
+    </label>
+    <label style="flex:1">Částka
+      <input type="text" name="castka" class="cislo" placeholder="1500"
+             value="{{ stav_radku.hodnota('castka') }}" required{{ stav_radku.atributy('castka') }}>
+      {{ stav_radku.napoveda('castka') }}
+    </label>
+    <button type="submit" class="zlute">Přidat</button>
+  </form>
+  <small>
+    Sem patří pohyby hotovosti, ke kterým není účtenka — převzatá záloha nebo odvod
+    zůstatku hospodáři. Účtenky a příjmy se do knihy dostanou samy.
+  </small>
+</article>
+
+{% if akce.ucastnici %}
+<article class="pridavani pridavani-kniha">
+  <h3>Vratka účastníkovi</h3>
+  <form method="post" action="/akce/{{ akce.id }}/pokladni-kniha/vratka" class="radek kniha-vratka">
+    <label style="flex:3">Účastník
+      <select name="ucastnik_id" required{{ stav_vratky.atributy('ucastnik_id') }}>
+        {% for u in akce.ucastnici %}
+          <option value="{{ u.id }}" {% if stav_vratky.hodnota('ucastnik_id') == u.id|string %}selected{% endif %}>{{ u.jmeno or '' }} {{ u.prijmeni or '' }}</option>
+        {% endfor %}
+      </select>
+      {{ stav_vratky.napoveda('ucastnik_id') }}
+    </label>
+    <label style="flex:1">Dne
+      <input type="date" name="datum" value="{{ stav_vratky.hodnota('datum', dnes) }}"
+             {{- stav_vratky.atributy('datum') }}>
+      {{ stav_vratky.napoveda('datum') }}
+    </label>
+    <label style="flex:1">Částka
+      <input type="text" name="castka" class="cislo" placeholder="300"
+             value="{{ stav_vratky.hodnota('castka') }}" required{{ stav_vratky.atributy('castka') }}>
+      {{ stav_vratky.napoveda('castka') }}
+    </label>
+    <button type="submit" class="zlute">Přidat</button>
+  </form>
+  <small>
+    Zapíše se výdej do knihy a zároveň částka do sloupce Vratka v Seznamu účastníků —
+    zadává se jen tady, ať se ta dvě místa nemůžou rozejít.
+  </small>
+</article>
+{% endif %}
+{% endif %}
+
+{% if radky %}
+  <div class="kniha-zahlavi">
+    <h2>Kniha ({{ radky|length }})</h2>
+    {% if srovnana_rucne and muze_psat %}
+      {# Ukazuje se az kdyz je co vracet - jinak by tlacitko jen matlo. #}
+      <form method="post" action="/akce/{{ akce.id }}/pokladni-kniha/srovnat">
+        <button type="submit" class="outline drobne">Seřadit podle data</button>
+      </form>
+    {% endif %}
+  </div>
+
+  <form method="post" action="/akce/{{ akce.id }}/pokladni-kniha/ulozit" data-prubezne>
+    <div class="siroka-tabulka">
+      <table class="husta kniha">
+        <thead>
+          <tr>
+            <th class="cislo">Č.</th>
+            <th>Dne</th>
+            <th>Dokl.</th>
+            <th class="kniha-ucel">Účel platby</th>
+            <th class="cislo">Příjem</th>
+            <th class="cislo">Výdej</th>
+            <th class="cislo">Zůstatek</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in radky %}
+            {# Zahlavi nazvu poli rika route, do ktere tabulky ma zmenu zapsat. #}
+            {% set p = 'radek' if r.zdroj == 'rucni' else r.zdroj %}
+            {# Cestakovy radek se chova jako prevod zustatku: jen ke cteni.
+               Jeho castka je soucet jizd a meni se na obrazovce cestaku. #}
+            {% set jen_cist = r.zdroj == 'prevod' or r.cestak_id %}
+            {# Jmeno radku pro ctecku obrazovky: cislo odlisi dva radky se stejnym ucelem. #}
+            {% set pop = r.cislo ~ '. ' ~ (r.ucel or 'bez účelu') %}
+            <tr>
+              <td class="cislo kniha-cislo">{{ r.cislo }}</td>
+              <td class="kniha-datum">
+                <span class="hodnota">{{ r.datum|datum if r.datum else '—' }}</span>
+                {% if not jen_cist %}
+                  <input class="uprava" type="date" name="{{ p }}_datum_{{ r.zdroj_id }}"
+                         aria-label="Datum — řádek {{ pop }}"
+                         value="{{ r.datum.isoformat() if r.datum else '' }}" {{ pole_zamcena }}>
+                {% endif %}
+              </td>
+              <td class="kniha-doklad">{{ r.doklad }}</td>
+              <td class="kniha-ucel">
+                <span class="hodnota">{{ r.ucel }}</span>
+                {% if not jen_cist %}
+                  <input class="uprava" type="text" name="{{ p }}_ucel_{{ r.zdroj_id }}"
+                         aria-label="Účel platby — řádek {{ pop }}"
+                         value="{{ r.ucel }}" {{ pole_zamcena }}>
+                {% endif %}
+                {% if r.mimo_slozku %}
+                  <span class="stitek chyba-stitek">mimo složku</span>
+                {% endif %}
+                {% if r.cestak_id %}
+                  <a href="/cestak/{{ r.cestak_id }}" class="duch drobne" role="button">Cesťák →</a>
+                {% endif %}
+                {# Rozdelena uctenka zustava jednim radkem s celou castkou -
+                   kategorie se jen vypisou pod ucelem platby, takze zustatek
+                   ani cislovani dokladu se o ne nezmeni. #}
+                {% if r.casti %}
+                  <small class="kniha-casti">
+                    {% for c in r.casti %}{% if not loop.first %} · {% endif %}{{ c.kategorie }} {{ c.castka|koruny }}{% endfor %}
+                  </small>
+                {% endif %}
+              </td>
+              <td class="cislo kniha-prijem" data-popisek="Příjem">
+                {% if r.prijem is not none %}
+                  <span class="hodnota">{{ r.prijem|koruny }}</span>
+                  <input class="uprava cislo" type="text"
+                         name="{{ p }}_castka_{{ r.zdroj_id }}" value="{{ r.prijem }}"
+                         aria-label="Příjem — řádek {{ pop }}" {{ pole_zamcena }}>
+                  {% if r.zdroj == 'rucni' %}{{ prepinac_smeru(r) }}{% endif %}
+                {% endif %}
+              </td>
+              <td class="cislo kniha-vydej" data-popisek="Výdej">
+                {% if r.zdroj == 'sken' or r.zdroj == 'prevod' or (r.zdroj == 'rucni' and r.smer != 'prijem') %}
+                  <span class="hodnota">{{ r.vydej|koruny if r.vydej is not none else '—' }}</span>
+                  {% if not jen_cist %}
+                    <input class="uprava cislo" type="text"
+                           name="{{ p }}_castka_{{ r.zdroj_id }}"
+                           value="{{ r.vydej if r.vydej is not none else '' }}"
+                           aria-label="Výdej — řádek {{ pop }}" {{ pole_zamcena }}>
+                    {% if r.zdroj == 'rucni' %}{{ prepinac_smeru(r) }}{% endif %}
+                  {% endif %}
+                {% endif %}
+              </td>
+              <td class="cislo kniha-zustatek {{ 'kladne' if r.zustatek >= 0 else 'zaporne' }}">
+                {{ r.zustatek|koruny }}
+              </td>
+              <td class="nastroje">
+                {# Prevod zustatku nema zadny z nastroju - neda se rucne posunout
+                   ani smazat, je to dopocitany radek, ne zaznam v databazi. #}
+                {% if not jen_cist and not akce_uzavrena %}
+                  {# Sipky patri spolecnemu formulari `presun` mimo tuhle tabulku:
+                     tlacitko umi poslat jen svoji jednu hodnotu, tak v ni jde
+                     zdroj, cislo i smer najednou. #}
+                  <button type="submit" form="presun" name="presun"
+                          value="{{ r.zdroj }}:{{ r.zdroj_id }}:nahoru"
+                          class="secondary drobne" title="O řádek výš"
+                          aria-label="Posunout řádek {{ pop }} o řádek výš"
+                          {% if loop.first %}disabled{% endif %}>↑</button>
+                  <button type="submit" form="presun" name="presun"
+                          value="{{ r.zdroj }}:{{ r.zdroj_id }}:dolu"
+                          class="secondary drobne" title="O řádek níž"
+                          aria-label="Posunout řádek {{ pop }} o řádek níž"
+                          {% if loop.last or radky[loop.index0 + 1].zdroj == 'prevod' %}disabled{% endif %}>↓</button>
+                  <button type="button" class="secondary drobne" data-upravit
+                          aria-pressed="false" title="Upravit řádek"
+                          data-radek="{{ pop }}" aria-label="Upravit řádek {{ pop }}"
+                          data-ikona="✎" data-ikona-hotovo="✓">✎</button>
+                  <button type="submit" form="smazat_{{ r.zdroj }}_{{ r.zdroj_id }}"
+                          class="kontrast-chyba drobne" title="Smazat řádek"
+                          aria-label="Smazat řádek {{ pop }}">×</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not akce_uzavrena %}<button type="submit" data-bez-js>Uložit</button>{% endif %}
+  </form>
+
+  {# Formulare, na ktere se odkazuji tlacitka v tabulce. Uvnitr <form> uz dalsi
+     formular byt nesmi, proto stoji az tady pod ni. #}
+  {% if not akce_uzavrena %}
+  <form method="post" action="/akce/{{ akce.id }}/pokladni-kniha/presunout" id="presun"></form>
+
+  {% for r in radky if r.zdroj != 'prevod' and not r.cestak_id %}
+    <form method="post" id="smazat_{{ r.zdroj }}_{{ r.zdroj_id }}"
+          {% if r.zdroj == 'sken' %}
+            action="/sken/{{ r.zdroj_id }}/smazat"
+            data-potvrdit="Smazat účtenku „{{ r.ucel }}“? Zmizí i její sken — z Účtenek, ze složky i z exportů. Vrátit to nejde."
+          {% elif r.zdroj == 'prijem' %}
+            action="/prijem/{{ r.zdroj_id }}/smazat"
+            data-potvrdit="Smazat příjem „{{ r.ucel }}“? Zmizí i z Příjmů."
+          {% else %}
+            action="/pokladni-radek/{{ r.zdroj_id }}/smazat"
+            data-potvrdit="Smazat řádek „{{ r.ucel }}“?"
+          {% endif %}>
+      <input type="hidden" name="kam" value="/akce/{{ akce.id }}/pokladni-kniha">
+    </form>
+  {% endfor %}
+  {% endif %}
+
+  {% if not akce_uzavrena %}
+  <small>
+    Tužtičkou u řádku ho přepneš do úprav, změny se ukládají samy. Šipky mění pořadí
+    řádků — číslo dokladu jde s účtenkou, takže se stejné číslo může v knize objevit
+    na dvou místech. Účel platby u účtenky je zároveň její název ve složce v ZIPu
+    a v Excelu pro hospodáře. Křížek maže i zdroj řádku: účtenku, nebo příjem.
+  </small>
+  {% endif %}
+
+  <h2>Souhrn</h2>
+  <article>
+    <table class="souhrn bilance">
+      <tbody>
+        <tr><td>Příjmy celkem</td><td class="cislo">{{ soucet_prijmu|koruny }}</td></tr>
+        <tr><td>Výdaje celkem</td><td class="cislo">{{ soucet_vydaju|koruny }}</td></tr>
+        <tr class="vysledek">
+          <td><strong>Konečný zůstatek</strong></td>
+          <td class="cislo">
+            <strong class="{{ 'kladne' if konecny_zustatek >= 0 else 'zaporne' }}">
+              {{ konecny_zustatek|koruny }}
+            </strong>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <small>Kniha začíná na nule. Zálohu od hospodáře zadej jako první řádek typu Příjem.</small>
+  </article>
+
+  <h2>Výstup</h2>
+  <article>
+    <p class="tlacitka">
+      <a href="/akce/{{ akce.id }}/export/pokladni-kniha" role="button">Pokladní kniha (Excel)</a>
+      <a href="/akce/{{ akce.id }}/doklady" role="button" class="outline">Tiskopisy PPD/VPD</a>
+    </p>
+    <small>
+      Formát podle vzoru střediska. Částky se do Excelu zaokrouhlí na celé koruny —
+      každý řádek zvlášť, aby sloupec seděl na kalkulačce. Když jsou na účtenkách haléře,
+      může se konečný zůstatek v Excelu o korunu nebo dvě lišit od zůstatku tady.
+      Tiskopisy jsou tytéž doklady na papíře — čísla v nich sedí se sloupcem <strong>Dokl.</strong>
+    </small>
+  </article>
+{% else %}
+  <p>
+    Kniha je zatím prázdná. Naplní se sama, jakmile budou účtenky ve složkách
+    a přibudou příjmy.
+  </p>
+{% endif %}
+{% endblock %}

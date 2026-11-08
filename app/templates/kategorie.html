@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block titulek %}Kategorie{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/okno.js') }}?v={{ verze('js/okno.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+<h1>Kategorie</h1>
+<p>Číselník druhů výdajů. Podle něj se účtenky třídí do složek.</p>
+
+{# Ciselnik meni jen spravce - server to vynucuje (JEN_SPRAVCE v routes/kategorie.py),
+   tady se jen neukazuji ovladaci prvky ostatnim. #}
+{% set smi_upravit = uzivatel.je_spravce %}
+
+{% if smi_upravit %}
+<article>
+  <form method="post" action="/kategorie/pridat" class="radek">
+    <label style="flex:2">Název
+      <input type="text" name="nazev" placeholder="Startovné" required
+             value="{{ stav_formulare.hodnota('nazev') }}"{{ stav_formulare.atributy('nazev') }}>
+      {{ stav_formulare.napoveda('nazev') }}
+    </label>
+    <label style="flex:1">Klíč pro AI (nepovinné)
+      <input type="text" name="klic" placeholder="startovne"
+             value="{{ stav_formulare.hodnota('klic') }}"{{ stav_formulare.atributy('klic') }}>
+      {{ stav_formulare.napoveda('klic') }}
+    </label>
+    <button type="submit" class="zlute">Přidat</button>
+  </form>
+</article>
+{% endif %}
+
+{% if not kategorie %}
+  <p>Zatím tu žádná kategorie není.{% if smi_upravit %} Přidej první formulářem nahoře — třeba Jídlo, Doprava, Materiál. Podle kategorií se účtenky třídí do složek.{% endif %}</p>
+{% else %}
+{# Na telefonu je z kazde kategorie kratky radek (nazev, pouziti) a klepnuti otevre okno
+   s polickami (js/okno.js, K-223). Jen pro toho, kdo smi upravovat: ostatni maji tabulku
+   bez poli. Policka zustavaji v tomhle formulari (uklada se tlacitkem Ulozit). #}
+{% if smi_upravit %}<form method="post" action="/kategorie/ulozit"
+      data-okno-seznam data-okno-nadpis="Upravit kategorii">{% endif %}
+  <div class="siroka-tabulka">
+  <table{% if smi_upravit %} class="okno-tabulka"{% endif %}>
+    <thead>
+      <tr><th>Název</th><th>Klíč</th><th class="cislo">Pořadí</th>
+          <th class="cislo">Použití</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for k in kategorie %}
+        <tr{% if smi_upravit %} data-okno-radek{% endif %}>
+          {% if smi_upravit %}
+            <td data-okno-pole="Název">
+              <input type="text" name="nazev_{{ k.id }}" value="{{ k.nazev }}"
+                     aria-label="Název kategorie — {{ k.nazev }}"
+                     {%- if k.pevna %} readonly aria-describedby="napoveda-pevna" title="Pevná kategorie – název nejde měnit"{% endif %}>
+              {% if k.pevna %}<span class="stitek" title="Základní kategorie — nejde smazat ani přejmenovat">pevná</span>{% endif %}
+            </td>
+            <td data-okno-pole="Klíč pro AI"><code>{{ k.klic or '—' }}</code></td>
+            <td data-okno-pole="Pořadí"><input type="number" name="poradi_{{ k.id }}" class="cislo" value="{{ k.poradi }}"
+                       aria-label="Pořadí — {{ k.nazev }}"></td>
+          {% else %}
+            <td>{{ k.nazev }}
+              {% if k.pevna %}<span class="stitek" title="Základní kategorie — nejde smazat ani přejmenovat">pevná</span>{% endif %}
+            </td>
+            <td><code>{{ k.klic or '—' }}</code></td>
+            <td class="cislo">{{ k.poradi }}</td>
+          {% endif %}
+          <td class="cislo"{% if smi_upravit %} data-okno-pole="Použito v účtenkách"{% endif %}>{{ pouziti.get(k.id, 0) }}×</td>
+          <td{% if smi_upravit %} data-okno-akce{% endif %}>
+            {% if smi_upravit and not k.pevna and not pouziti.get(k.id) %}
+              {# V okne na telefonu misto krizku stoji text (.okno-krizek / .okno-text). #}
+              <button type="submit" form="smazat_kat_{{ k.id }}" class="kontrast-chyba drobne"
+                      title="Smazat kategorii" aria-label="Smazat kategorii {{ k.nazev }}"><span class="okno-krizek">×</span><span class="okno-text">Smazat kategorii</span></button>
+            {% endif %}
+          </td>
+          {% if smi_upravit %}
+            <td class="okno-kratky">
+              <button type="button" class="okno-otevrit" aria-haspopup="dialog">
+                <span class="okno-nazev" data-zrcadlo="nazev_{{ k.id }}">{{ k.nazev }}</span>
+                {% if k.pevna %}<span class="stitek">pevná</span>{% endif %}
+                <span class="okno-hodnota">{{ pouziti.get(k.id, 0) }}×</span>
+              </button>
+            </td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% if smi_upravit %}
+  <button type="submit">Uložit</button>
+</form>
+
+{% for k in kategorie %}
+  <form method="post" action="/kategorie/{{ k.id }}/smazat" id="smazat_kat_{{ k.id }}"
+        data-potvrdit="Smazat kategorii „{{ k.nazev }}“ ze seznamu? Vrátit to nejde."></form>
+{% endfor %}
+{% endif %}
+{% endif %}
+
+<article>
+  <small>
+    <strong>Klíč</strong> je stálé označení, přes které se kategorie napojuje na to, co vrací AI.
+    Díky němu můžeš kategorii libovolně přejmenovat, aniž by se rozpoznávání rozbilo. Kategorie,
+    kterou používá aspoň jedna účtenka, nejde smazat.
+  </small>
+  <small id="napoveda-pevna">
+    Kategorie se štítkem <strong>pevná</strong> (základních devět; z <code>vecne dary</code> appka čte
+    věcné dary z účtenek) nejde smazat, přejmenovat ani jim změnit klíč. Vlastní kategorie můžeš
+    libovolně přidávat, přejmenovávat a mazat.
+  </small>
+</article>
+{% endblock %}

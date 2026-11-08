@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% block titulek %}Obdarovaní — {{ akce.nazev }}{% endblock %}
+{% block telo_trida %}{% if akce_uzavrena %}jen-cteni{% endif %}{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/tabulky.js') }}?v={{ verze('js/tabulky.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/rozdavani.js') }}?v={{ verze('js/rozdavani.js') }}" defer></script>
+{% endblock %}
+
+{# Karticka jedne veci. Krizek dela neco jineho podle toho, kde vec lezi:
+   u cloveka ji vrati do zasobniku, v zasobniku ji smaze. Bez JavaScriptu
+   odesle prislusny formular niz na strance, s nim ho js/rozdavani.js zachyti a udela
+   totez bez znovunacteni stranky. #}
+{# Nazev veci je <span role="button">, ne <button>: <button> uvnitr tazitelneho
+   prvku brani ve Firefoxu pretahovani mysi. Enter a mezeru obsluhuje
+   js/rozdavani.js, tabindex dava vec do poradi na Tab. Bez JavaScriptu
+   nedela nic - vybrat vec jde jen s nim, jako driv klikem. #}
+{% macro karticka(dar, v_zasobniku) %}
+  <span class="dar"{% if not akce_uzavrena %} draggable="true"{% endif %} data-dar="{{ dar.id }}">
+    <span class="dar-nazev" role="button" tabindex="0" aria-pressed="false">{{ dar.nazev }}</span>
+    {% if not akce_uzavrena %}
+    <button type="submit" form="vec_{{ dar.id }}" class="dar-pryc kontrast-chyba drobne"
+            title="{{ 'Smazat věc' if v_zasobniku else 'Vrátit do zásobníku' }}"
+            aria-label="{{ 'Smazat věc' if v_zasobniku else 'Vrátit do zásobníku věc' }} {{ dar.nazev }}">×</button>
+    {% endif %}
+  </span>
+{% endmacro %}
+
+{% block obsah %}
+{% with aktivni = 'obdarovani' %}{% include "akce_menu.html" %}{% endwith %}
+
+{# Radek je jeden clovek. Co dostal, visi na nem jako karticky - kdo dostal
+   dve veci, ma u sebe dve karticky, ne dva radky. #}
+<div class="pracovni-plocha">
+  {% if muze_psat %}
+  <article>
+    <h3>Přidat ze seznamu účastníků</h3>
+    {% if akce.ucastnici %}
+      <form method="post" action="/akce/{{ akce.id }}/obdarovani/z-ucastniku">
+        <div class="vyber-lidi">
+          {% for u in akce.ucastnici %}
+            <label class="volba-cloveka">
+              <input type="checkbox" name="ucastnik_{{ u.id }}">
+              {{ u.jmeno or '' }} {{ u.prijmeni or '' }}
+              {%- if u.prezdivka %} <small>({{ u.prezdivka }})</small>{% endif %}
+            </label>
+          {% endfor %}
+        </div>
+        <p class="tlacitka">
+          <button type="submit" class="zlute">Přidat vybrané</button>
+        </p>
+        <small>
+          Údaje se do seznamu <strong>opíšou</strong> — adresu a datum narození
+          opravíš v <a href="/akce/{{ akce.id }}/ucastnici">Účastnících</a>.
+          Kdo dostane dvě věci, patří do seznamu jednou; obě se mu dají k jménu.
+        </small>
+      </form>
+    {% else %}
+      <p>
+        Akce zatím nemá žádné účastníky. Naimportuj je
+        v <a href="/akce/{{ akce.id }}/ucastnici">Účastnících</a>, nebo přidej řádek ručně.
+      </p>
+    {% endif %}
+
+    <form method="post" action="/akce/{{ akce.id }}/obdarovani/pridat" style="margin-top:1rem">
+      <button type="submit" class="outline">Přidat prázdný řádek</button>
+      <small>Pro toho, kdo v seznamu účastníků není — host, vedoucí ze sousedního oddílu.</small>
+    </form>
+  </article>
+  {% endif %}
+
+  {# Cteni uctenek za vecne dary. Do Gemini jde jen fotka uctenky - jmena
+     a adresy deti server nikdy neopousti. #}
+  <article {% if not uctenky %}class="uspane"{% endif %}>
+    <h3>Vytáhnout věci z účtenek</h3>
+    {% if not kategorie_daru %}
+      <p>
+        V číselníku není kategorie věcných darů. Založ ji
+        v <a href="/kategorie">Kategoriích</a> — appka ji pozná jen podle klíče
+        <code>vecne dary</code> (zadej ho při zakládání; název může být libovolný).
+      </p>
+    {% elif not uctenky %}
+      <p>
+        Žádná účtenka nemá kategorii <strong>{{ kategorie_daru.nazev }}</strong>.
+        Nastav ji u nákupu cen v <a href="/akce/{{ akce.id }}/skeny">Účtenkách</a>.
+      </p>
+    {% else %}
+      {% if not akce_uzavrena %}
+      {% with kam = '/akce/' ~ akce.id ~ '/obdarovani' %}
+        {% include "prepinac_tarifu.html" %}
+      {% endwith %}
+      {% endif %}
+
+      <ul class="seznam-uctenek-daru">
+        {% for sken in uctenky %}
+          <li>
+            <span class="uctenka-nazev">{{ sken.nazev or sken.puvodni_nazev }}</span>
+            {% if pocty_veci[sken.id] or sken.dary_precteny %}
+              <span class="stitek ok">{{ pocty_veci[sken.id]|mnozne('věc', 'věci', 'věcí') }}</span>
+              {% if not akce_uzavrena %}
+              <button type="submit" form="znovu_{{ sken.id }}" class="duch drobne"
+                      title="Zahodit věci z téhle účtenky a přečíst ji znovu"
+                      aria-label="Zahodit věci z účtenky {{ sken.nazev or sken.puvodni_nazev }} a přečíst ji znovu">↻</button>
+              {% endif %}
+            {% elif sken in nepovedene %}
+              <small>Nepodařilo se přečíst ani na třetí pokus — vyplň ručně nebo nahraj lepší fotku.</small>
+              {% if not akce_uzavrena %}<button type="submit" form="zkusit_{{ sken.id }}" class="outline drobne">Zkusit znovu</button>{% endif %}
+            {% else %}
+              <span class="stitek pozor">nepřečteno</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+
+      {% if neprectene and akce_uzavrena %}
+        {# Cteni AI je zapis do akce - na uzavrene akci se nenabizi. #}
+      {% elif neprectene %}
+        <form method="post" action="/akce/{{ akce.id }}/obdarovani/vycist"
+              data-cekani="Čtu účtenky — jedna trvá 5–15 s, nezavírej stránku…">
+          <button type="submit" class="zlute">
+            Vytáhnout věci ({{ neprectene|length if neprectene|length < davka else davka }})
+          </button>
+        </form>
+        <small>
+          AI přečte, co je na účtence koupené, a věci spadnou do zásobníku vpravo.
+          Čte se po {{ davka }} účtenkách a jen když na tlačítko klikneš{% if tarif == 'zdarma' %}
+          — kvůli limitům bezplatného tarifu Google AI Studio{% endif %}.
+          Kus = jedna kartička: „3× míč“ jsou tři míče.
+        </small>
+      {% elif nepovedene %}
+        <p><span class="stitek chyba-stitek">Zbylé účtenky se nepodařilo přečíst</span></p>
+      {% else %}
+        <p><span class="stitek ok">Všechny účtenky přečtené</span></p>
+        <small>Věci jsou v zásobníku vpravo. Rozdej je přetažením, nebo je nech rozhodit.</small>
+      {% endif %}
+    {% endif %}
+  </article>
+</div>
+
+{% if not akce_uzavrena %}
+{% for sken in uctenky %}
+  <form method="post" action="/sken/{{ sken.id }}/dary/znovu" id="znovu_{{ sken.id }}"
+        data-cekani="Čtu účtenku znovu — trvá to pár vteřin, nezavírej stránku…"
+        data-potvrdit="Zahodit věci z účtenky „{{ sken.nazev or sken.puvodni_nazev }}“ (i ty už rozdané) a přečíst ji znovu? Čtení se platí."></form>
+  <form method="post" action="/sken/{{ sken.id }}/cteni/znovu" id="zkusit_{{ sken.id }}"
+        data-cekani="Čtu účtenku — trvá to pár vteřin, nezavírej stránku…">
+    <input type="hidden" name="kam" value="/akce/{{ akce.id }}/obdarovani">
+  </form>
+{% endfor %}
+{% endif %}
+
+{% if akce.obdarovani %}
+  <h2>Rozdělení ({{ akce.obdarovani|length }})</h2>
+
+  {# Vlevo lide, vpravo zasobnik. Karticka se chytne mysi a pretahne do bunky
+     u cloveka; kdo mys nechce, klikne na karticku a pak na bunku. #}
+  <div class="rozdavani" data-rozdavani>
+    <form method="post" action="/akce/{{ akce.id }}/obdarovani/ulozit" data-prubezne>
+      <div class="siroka-tabulka">
+      <table class="husta tabulka-daru">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Jméno a příjmení</th>
+            <th>Co dostane</th>
+            <th></th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in akce.obdarovani %}
+            {# Jmeno radku pro ctecku obrazovky; bez jmena aspon poradi. #}
+            {% set pop = o.cele_jmeno or ('řádek ' ~ loop.index) %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>
+                <span class="hodnota">
+                  {%- if o.cele_jmeno %}{{ o.cele_jmeno }}
+                  {%- if o.prezdivka %} <small>({{ o.prezdivka }})</small>{% endif %}
+                  {%- else %}<span class="stitek pozor">bez jména</span>{% endif -%}
+                </span>
+                <span class="uprava jmeno-upravy">
+                  <input type="text" name="jmeno_{{ o.id }}" value="{{ o.jmeno or '' }}"
+                         placeholder="Jméno" aria-label="Jméno — {{ pop }}" {{ pole_zamcena }}>
+                  <input type="text" name="prijmeni_{{ o.id }}" value="{{ o.prijmeni or '' }}"
+                         placeholder="Příjmení" aria-label="Příjmení — {{ pop }}" {{ pole_zamcena }}>
+                  <input type="text" name="prezdivka_{{ o.id }}" value="{{ o.prezdivka or '' }}"
+                         placeholder="Přezdívka" aria-label="Přezdívka — {{ pop }}" {{ pole_zamcena }}>
+                </span>
+              </td>
+              {# Bunka je zaroven mistem, kam se karticka pusti. Prazdna
+                 sviti, ze clovek zatim nic nedostal. #}
+              <td class="veci-cloveka" data-prihradka="{{ o.id }}">
+                {% for dar in o.dary %}{{ karticka(dar, false) }}{% endfor %}
+                <span class="stitek pozor" data-prazdno {% if o.dary %}hidden{% endif %}>nic</span>
+                {# Ukaze se, az je nejaka vec vybrana (js/rozdavani.js) - cesta pro ty,
+                   kdo veci nepretahuji mysi. #}
+                {% if muze_psat %}
+                  <button type="button" class="outline drobne dat-sem" data-dat-sem hidden
+                          aria-label="Dát vybranou věc: {{ pop }}">Dát sem</button>
+                {% endif %}
+              </td>
+              <td>
+                {% if not akce_uzavrena %}
+                <button type="button" class="secondary drobne" data-upravit
+                        aria-pressed="false" title="Upravit jméno"
+                        data-radek="{{ pop }}" aria-label="Upravit jméno — {{ pop }}"
+                        data-ikona="✎" data-ikona-hotovo="✓">✎</button>
+                {% endif %}
+              </td>
+              <td>
+                {% if not akce_uzavrena %}
+                <button type="submit" form="smazat_obdarovaneho_{{ o.id }}"
+                        class="kontrast-chyba drobne" title="Odebrat ze seznamu"
+                        aria-label="Odebrat ze seznamu {{ pop }}">×</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+      {% if not akce_uzavrena %}<button type="submit" data-bez-js>Uložit změny</button>{% endif %}
+    </form>
+
+    <aside class="zasobnik">
+      <h3>Zásobník (<span data-pocet-zasobniku>{{ zasobnik|length }}</span>)</h3>
+      {% if akce.dary and not akce_uzavrena %}
+        <form method="post" action="/akce/{{ akce.id }}/obdarovani/rozhodit">
+          <button type="submit" class="zlute" {% if not zasobnik %}disabled{% endif %}>
+            Rozhodit automaticky
+          </button>
+        </form>
+      {% endif %}
+
+      <div class="zasobnik-veci" data-prihradka="">
+        {% for dar in zasobnik %}{{ karticka(dar, true) }}{% endfor %}
+        <p class="zasobnik-prazdny" data-prazdno {% if zasobnik %}hidden{% endif %}>
+          {% if akce.dary %}Všechno rozdané.{% else %}Zatím tu nic není.{% endif %}
+        </p>
+      </div>
+
+      {# Ctecka obrazovky se tu dozvi, co se s vybranou veci stalo (js/rozdavani.js). #}
+      <p class="jen-pro-cteni" role="status" data-hlaseni></p>
+      <small>
+        Chyť věc myší a pusť ji u jména. Nebo na ni klikni a pak klikni na řádek
+        člověka. Z klávesnice: Tabem na věc, Enter ji vybere, Tabem k člověku a Enter
+        na tlačítku Dát sem; Escape výběr zruší. Křížek u rozdané věci ji vrátí sem,
+        křížek tady ji smaže.
+      </small>
+    </aside>
+  </div>
+
+  {% if not akce_uzavrena %}
+  {% for o in akce.obdarovani %}
+    <form method="post" action="/obdarovany/{{ o.id }}/smazat"
+          id="smazat_obdarovaneho_{{ o.id }}"
+          data-potvrdit="Odebrat {% if o.cele_jmeno %}„{{ o.cele_jmeno }}“{% else %}prázdný řádek{% endif %} ze seznamu? Jeho věci se vrátí do zásobníku."></form>
+  {% endfor %}
+
+  {# Zaloha pro prohlizec bez JavaScriptu: krizek u kartičky odesle tenhle
+     formular a stranka se znovu nacte. S JavaScriptem se sem nikdy nedojde. #}
+  {% for dar in akce.dary %}
+    {% if dar.obdarovany_id %}
+      <form method="post" action="/dar/{{ dar.id }}/priradit" id="vec_{{ dar.id }}">
+        <input type="hidden" name="obdarovany" value="">
+      </form>
+    {% else %}
+      <form method="post" action="/dar/{{ dar.id }}/smazat" id="vec_{{ dar.id }}"
+            data-potvrdit="Smazat věc „{{ dar.nazev }}“? Vrátit to nejde."></form>
+    {% endif %}
+  {% endfor %}
+  {% endif %}
+
+  {% if not akce_uzavrena %}
+  <p><small>
+    Tužtičkou u řádku přepíšeš jméno; ukládá se samo. Křížek u řádku odebere
+    člověka ze seznamu — účastníka nechá být a jeho věci vrátí do zásobníku.
+  </small></p>
+  {% endif %}
+
+  {% if not akce_uzavrena %}
+  <details>
+    <summary>Smazat</summary>
+    <article>
+      <p class="tlacitka">
+        <button type="submit" form="smazat_veci_akce" class="kontrast-chyba">
+          Smazat všechny věci
+        </button>
+        <button type="submit" form="smazat_obdarovane_akce" class="kontrast-chyba">
+          Smazat všechny obdarované
+        </button>
+      </p>
+      <small>
+        Smazání věcí zahodí i ty rozdané — účtenky se pak dají přečíst znovu.
+        Smazání obdarovaných nechá věci být, spadnou zpátky do zásobníku.
+      </small>
+    </article>
+  </details>
+  <form method="post" action="/akce/{{ akce.id }}/obdarovani/veci/smazat" id="smazat_veci_akce"
+        data-potvrdit="Smazat všech {{ akce.dary|length }} věcí, i těch už rozdaných? Účtenky se pak musí číst znovu (a čtení se platí)."></form>
+  <form method="post" action="/akce/{{ akce.id }}/obdarovani/smazat" id="smazat_obdarovane_akce"
+        data-potvrdit="Smazat všech {{ akce.obdarovani|length }} obdarovaných? Jejich věci se vrátí do zásobníku."></form>
+  {% endif %}
+
+  <article>
+    <small>
+      Tahle data zůstávají jen na serveru. Nikdy se neposílají do AI a nikdy nekončí v gitu —
+      jsou to adresy a data narození dětí. Do AI jde jen fotka účtenky.
+    </small>
+  </article>
+{% else %}
+  <p>Zatím tu nikdo není.{% if muze_psat %} Přidej lidi nahoře — pak jim bude co rozdávat.{% endif %}</p>
+{% endif %}
+{% endblock %}

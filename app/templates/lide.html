@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block titulek %}Lidé{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/okno.js') }}?v={{ verze('js/okno.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+<h1>Lidé</h1>
+<p>Číselník lidí, kteří na akcích platí a přijímají peníze. U účtenky i u složky se pak jen vybírá ze seznamu.</p>
+
+{# Pridat cloveka (jen jmeno) smi kazdy, kdo zapisuje. Upravit, smazat a videt
+   ucty lidi smi jen spravce - server to vynucuje (JEN_SPRAVCE v routes/lide.py),
+   tady se jen neukazuji ovladaci prvky ostatnim. #}
+{% set smi_upravit = uzivatel.je_spravce %}
+
+{% if uzivatel.muze_zapisovat %}
+<article>
+  <form method="post" action="/lide/pridat" class="radek">
+    <label style="flex:2">Jméno
+      <input type="text" name="jmeno" placeholder="Jan Novák" required
+             value="{{ stav_formulare.hodnota('jmeno') }}"{{ stav_formulare.atributy('jmeno') }}>
+      {{ stav_formulare.napoveda('jmeno') }}
+    </label>
+    <button type="submit" class="zlute">Přidat</button>
+  </form>
+</article>
+{% endif %}
+
+{% if lide %}
+  {# Na telefonu je z kazdeho cloveka kratky radek (jmeno, pouziti) a klepnuti otevre okno
+     s polickami a tlacitky (js/okno.js, K-223). Jen pro spravce: ostatni maji tabulku
+     bez poli. Policka zustavaji v tomhle formulari (uklada se tlacitkem Ulozit). #}
+  {% if smi_upravit %}<form method="post" action="/lide/ulozit"
+        data-okno-seznam data-okno-nadpis="Upravit člověka">{% endif %}
+    <div class="siroka-tabulka">
+    <table{% if smi_upravit %} class="okno-tabulka"{% endif %}>
+      <thead>
+        <tr>
+          <th>Jméno</th><th>E-mail</th><th>Bydliště</th><th>Kontakt</th>
+          <th class="cislo">Pořadí</th><th class="cislo">Použití</th>
+          {% if smi_upravit %}<th>Účet</th><th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in lide %}
+          <tr{% if smi_upravit %} data-okno-radek{% endif %}>
+            {% if smi_upravit %}
+            <td data-okno-pole="Jméno"><input type="text" name="jmeno_{{ c.id }}" value="{{ c.jmeno }}"
+                       aria-label="Jméno — {{ c.jmeno }}"></td>
+            <td data-okno-pole="E-mail"><input type="email" name="email_{{ c.id }}" value="{{ c.email or '' }}"
+                       aria-label="E-mail — {{ c.jmeno }}"
+                       placeholder="jan.novak@example.cz"></td>
+            <td data-okno-pole="Bydliště"><input type="text" name="adresa_{{ c.id }}" value="{{ c.adresa or '' }}"
+                       aria-label="Bydliště — {{ c.jmeno }}"
+                       placeholder="Hlavní 1, 602 00 Brno"></td>
+            <td data-okno-pole="Kontakt"><input type="text" name="kontakt_{{ c.id }}" value="{{ c.kontakt or '' }}"
+                       aria-label="Kontakt — {{ c.jmeno }}"
+                       placeholder="+420 600 000 000"></td>
+            <td data-okno-pole="Pořadí"><input type="number" name="poradi_{{ c.id }}" class="cislo" value="{{ c.poradi }}"
+                       aria-label="Pořadí — {{ c.jmeno }}"></td>
+            {% else %}
+            <td>{{ c.jmeno }}</td>
+            <td>{{ c.email or '' }}</td>
+            <td>{{ c.adresa or '' }}</td>
+            <td>{{ c.kontakt or '' }}</td>
+            <td class="cislo">{{ c.poradi }}</td>
+            {% endif %}
+            <td class="cislo"{% if smi_upravit %} data-okno-pole="Použito v účtenkách"{% endif %}>{{ pouziti[c.id].uctenky if c.id in pouziti else 0 }}×</td>
+            {% if smi_upravit %}
+            <td data-okno-pole="Účet">
+              {% if not c.uzivatel_id %}
+                <span class="stitek">—</span>
+              {% elif c.ucet.aktivni %}
+                <span class="stitek ok">aktivní ({{ c.ucet.login }})</span>
+              {% else %}
+                {% set pozvanka = posledni_pozvanky.get(c.uzivatel_id) %}
+                <span class="stitek pozor">
+                  pozván{% if pozvanka %} {{ pozvanka.vytvoreno | datum }}{% endif %}, čeká
+                </span>
+              {% endif %}
+            </td>
+            <td data-okno-akce>
+              {% if not c.uzivatel_id %}
+                <button type="submit" form="pozvat_clovek_{{ c.id }}" class="drobne"
+                        title="Pozvat e-mailem"
+                        aria-label="Pozvat e-mailem — {{ c.jmeno }}">Pozvat</button>
+              {% elif not c.ucet.aktivni %}
+                <button type="submit" form="pozvat_clovek_{{ c.id }}" class="drobne"
+                        title="Poslat pozvánku znovu"
+                        aria-label="Poslat znovu pozvánku — {{ c.jmeno }}">Poslat znovu</button>
+                <button type="submit" form="odpojit_clovek_{{ c.id }}" class="kontrast-chyba drobne"
+                        title="Odpojit účet"
+                        aria-label="Odpojit účet — {{ c.jmeno }}">Odpojit</button>
+              {% else %}
+                <button type="submit" form="odpojit_clovek_{{ c.id }}" class="kontrast-chyba drobne"
+                        title="Odpojit účet"
+                        aria-label="Odpojit účet — {{ c.jmeno }}">Odpojit</button>
+              {% endif %}
+              {% if c.id not in pouziti %}
+                <button type="submit" form="smazat_clovek_{{ c.id }}" class="kontrast-chyba drobne"
+                        title="Smazat ze seznamu"
+                        aria-label="Smazat ze seznamu {{ c.jmeno }}"><span class="okno-krizek">×</span><span class="okno-text">Smazat ze seznamu</span></button>
+              {% endif %}
+            </td>
+            <td class="okno-kratky">
+              <button type="button" class="okno-otevrit" aria-haspopup="dialog">
+                <span class="okno-nazev" data-zrcadlo="jmeno_{{ c.id }}">{{ c.jmeno }}</span>
+                <span class="okno-hodnota">{{ pouziti[c.id].uctenky if c.id in pouziti else 0 }}×</span>
+              </button>
+            </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% if smi_upravit %}
+    <button type="submit">Uložit</button>
+  </form>
+
+  {% for c in lide %}
+    <form method="post" action="/lide/{{ c.id }}/smazat" id="smazat_clovek_{{ c.id }}"
+          data-potvrdit="Smazat „{{ c.jmeno }}“ ze seznamu lidí? Vrátit to nejde."></form>
+    <form method="post" action="/lide/{{ c.id }}/pozvat" id="pozvat_clovek_{{ c.id }}"></form>
+    <form method="post" action="/lide/{{ c.id }}/odpojit" id="odpojit_clovek_{{ c.id }}"
+          data-potvrdit="Odpojit účet od „{{ c.jmeno }}“? Účet zůstane, jen ho appka přestane nabízet u tohoto člověka."></form>
+  {% endfor %}
+  {% endif %}
+{% else %}
+  <p>Zatím tu nikdo není.{% if uzivatel.muze_zapisovat %} Přidej prvního člověka výš — pak se objeví v nabídce u účtenek.{% endif %}</p>
+{% endif %}
+
+<article>
+  <small>
+    Jméno se na tiskopis PPD/VPD tiskne <strong>dvakrát</strong> — do kolonky „Vyplaceno komu“
+    a pod podpisovou linku příjemce. Proto se zadává jednou tady a jinde už se jen vybírá.
+    Ze stejného důvodu se odsud vybírá i <strong>pokladník akce</strong> a
+    <strong>cestující na cestovním příkazu</strong> — tomu se navíc na papír tiskne
+    bydliště a kontakt, takže se vyplňují tady a na cesťáku se jen předvyplní.
+    Přejmenování se propíše všude. Člověka, kterého používá aspoň jedna účtenka,
+    je někde pokladníkem nebo cestujícím, nejde smazat.
+  </small>
+</article>
+{% endblock %}

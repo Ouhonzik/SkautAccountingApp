@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block titulek %}Cesťáky — {{ akce.nazev }}{% endblock %}
+
+{% block obsah %}
+{% with aktivni = 'cestaky' %}{% include "akce_menu.html" %}{% endwith %}
+
+{# Na uzavřené akci se formulář nenabízí: server by zápis stejně odmítl. #}
+{% if muze_psat %}
+<article class="pridavani">
+  <details{% if stav_formulare.odeslano %} open{% endif %}>
+    <summary><span class="nadpis-pridavani">Založit cestovní příkaz</span></summary>
+    <form method="post" action="/akce/{{ akce.id }}/cestaky/pridat" class="cestak-zalozeni">
+      <label>Účel cesty
+        <input type="text" name="ucel_cesty" required
+               placeholder="Doprava osob a materiálu — {{ akce.nazev }}"
+               value="{{ stav_formulare.hodnota('ucel_cesty') }}"{{ stav_formulare.atributy('ucel_cesty') }}>
+        {{ stav_formulare.napoveda('ucel_cesty') }}
+      </label>
+      <label>Místo
+        <input type="text" name="misto" placeholder="Chlébské"
+               value="{{ stav_formulare.hodnota('misto') }}"{{ stav_formulare.atributy('misto') }}>
+        {{ stav_formulare.napoveda('misto') }}
+      </label>
+
+      <label>Cestující
+        <select name="cestujici_id"{{ stav_formulare.atributy('cestujici_id') }}>
+          <option value="">— vyber ze seznamu lidí —</option>
+          {% for c in lide %}
+            <option value="{{ c.id }}"{% if stav_formulare.hodnota('cestujici_id') == c.id|string %} selected{% endif %}>{{ c.jmeno }}</option>
+          {% endfor %}
+        </select>
+        {{ stav_formulare.napoveda('cestujici_id') }}
+        {% if not lide %}
+          <small>V číselníku zatím nikdo není — <a href="/lide">založ lidi</a>.</small>
+        {% endif %}
+      </label>
+      <label>Jednotka
+        <input type="text" name="jednotka" value="{{ stav_formulare.hodnota('jednotka', vychozi_jednotka) }}"{{ stav_formulare.atributy('jednotka') }}>
+        {{ stav_formulare.napoveda('jednotka') }}
+      </label>
+
+      <label>Vozidlo
+        <select name="vozidlo_id"{{ stav_formulare.atributy('vozidlo_id') }}>
+          <option value="">— vyber ze seznamu vozidel —</option>
+          {% for v in vozidla %}
+            <option value="{{ v.id }}"{% if stav_formulare.hodnota('vozidlo_id') == v.id|string %} selected{% endif %}>
+              {{ v.nazev }}{% if v.spz %} ({{ v.spz }}){% endif %}{% if v.spotreba %} — {{ v.spotreba|desetinne }} l/100 km{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        {{ stav_formulare.napoveda('vozidlo_id') }}
+        {% if not vozidla %}
+          <small>V číselníku zatím žádné vozidlo není — <a href="/vozidla">založ vozidla</a>.</small>
+        {% endif %}
+      </label>
+      <label>Opotřebení (Kč/km)
+        <input type="text" name="opotrebeni" inputmode="decimal"
+               value="{{ stav_formulare.hodnota('opotrebeni', vychozi_opotrebeni|desetinne) }}" placeholder="5,00"{{ stav_formulare.atributy('opotrebeni') }}>
+        {{ stav_formulare.napoveda('opotrebeni') }}
+      </label>
+
+      <label>Palivová účtenka
+        <select name="palivova_uctenka_id"{{ stav_formulare.atributy('palivova_uctenka_id') }}>
+          <option value="">— žádná —</option>
+          {% for s in uctenky %}
+            <option value="{{ s.id }}"{% if stav_formulare.hodnota('palivova_uctenka_id') == s.id|string %} selected{% endif %}>
+              {{ s.nazev or s.puvodni_nazev }}{% if s.cena_za_litr %} — {{ s.cena_za_litr|koruny }}/l{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        {{ stav_formulare.napoveda('palivova_uctenka_id') }}
+      </label>
+      <label>Cena paliva (Kč/l)
+        <input type="text" name="cena_za_litr" inputmode="decimal" placeholder="30,90"
+               value="{{ stav_formulare.hodnota('cena_za_litr') }}"{{ stav_formulare.atributy('cena_za_litr') }}>
+        {{ stav_formulare.napoveda('cena_za_litr') }}
+      </label>
+
+      <label>Spolucestující
+        <input type="text" name="spolucestujici"
+               value="{{ stav_formulare.hodnota('spolucestujici') }}"{{ stav_formulare.atributy('spolucestujici') }}>
+        {{ stav_formulare.napoveda('spolucestujici') }}
+      </label>
+      <label>Poznámka
+        <input type="text" name="poznamka"
+               value="{{ stav_formulare.hodnota('poznamka') }}"{{ stav_formulare.atributy('poznamka') }}>
+        {{ stav_formulare.napoveda('poznamka') }}
+      </label>
+
+      <p class="tlacitka"><button type="submit" class="zlute">Založit</button></p>
+    </form>
+  </details>
+</article>
+{% endif %}
+
+{% if akce.cestaky %}
+  <div class="siroka-tabulka">
+    <table class="cestaky-seznam">
+      <thead>
+        <tr>
+          <th>Účel cesty</th>
+          <th>Cestující</th>
+          <th>Vozidlo</th>
+          <th>První jízda</th>
+          <th class="cislo">Náhrada</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in akce.cestaky %}
+          <tr>
+            <td class="ce-ucel"><a href="/cestak/{{ c.id }}">{{ c.ucel_cesty }}</a></td>
+            <td class="ce-cestujici">{{ c.cestujici.jmeno if c.cestujici else '—' }}</td>
+            <td class="ce-vozidlo">
+              {% if c.vozidlo %}
+                {{ c.vozidlo.nazev }}{% if c.vozidlo.spz %} <small>({{ c.vozidlo.spz }})</small>{% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td class="ce-zacatek">{{ zacatky[c.id]|datum if zacatky[c.id] else '—' }}</td>
+            <td class="cislo ce-nahrada">{{ castky[c.id]|koruny }}</td>
+            <td class="ce-akce">
+              <a href="/cestak/{{ c.id }}" role="button" class="outline drobne">Otevřít</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p>Zatím tu žádný cestovní příkaz není.{% if muze_psat %} Založ první výš.{% endif %}</p>
+{% endif %}
+
+<article>
+  <small>
+    Cestovní příkaz patří do téhle akce — na rozdíl od h.skauting.cz, kde jsou všechny
+    za rok pohromadě. Cestující se vybírá z číselníku <a href="/lide">Lidé</a> (odtud se
+    přebírá i bydliště a kontakt na papír), auto z číselníku
+    <a href="/vozidla">Vozidla</a>. <strong>Cena paliva</strong> se vypíše sama, když
+    vybereš palivovou účtenku, kterou je doložená — nabízejí se účtenky označené jako
+    příloha.
+  </small>
+</article>
+{% endblock %}

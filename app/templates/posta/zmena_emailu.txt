@@ -1,0 +1,10 @@
+Ahoj {{ jmeno }},
+
+potvrď prosím tuhle e-mailovou adresu pro svůj účet v aplikaci Účtování akcí
+kliknutím na odkaz níže:
+
+{{ odkaz }}
+
+Odkaz platí do {{ platnost }}.
+
+Pokud jsi o to nežádal(a), e-mail ignoruj.

@@ -1,0 +1,11 @@
+Ahoj {{ jmeno }},
+
+e-mail tvého účtu v aplikaci Účtování akcí se změnil.
+
+Původní adresa: {{ stary_email }}
+{% if novy_email %}Nová adresa: {{ novy_email }}{% else %}Účet teď nemá žádný e-mail.{% endif %}
+Změnu provedl(a): {{ kdo }}.
+
+Na původní adresu už aplikace nebude posílat nic dalšího, třeba obnovu hesla.
+
+Pokud o změně nevíš, ozvi se správci aplikace.

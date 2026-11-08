@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulek %}Obnova ze zálohy{% endblock %}
+{% block skripty %}
+  <script src="{{ url_for('static', path='js/soubory.js') }}?v={{ verze('js/soubory.js') }}" defer></script>
+{% endblock %}
+
+{% block obsah %}
+<h1>Obnova akce ze zálohy</h1>
+
+<article>
+  <p>
+    Nahraj ZIP, který appka dřív vyrobila tlačítkem <strong>Stáhnout zálohu akce</strong>.
+    Založí se z něj <strong>úplně nová akce</strong> se všemi skeny, složkami, účastníky
+    i pokladní knihou — žádná existující akce se tím nepřepíše ani nesmaže.
+  </p>
+  <form method="post" action="/obnova" enctype="multipart/form-data" class="import-ucastniku"
+        data-cekani="Obnovuji akci ze zálohy — větší ZIP chvíli trvá, nezavírej stránku…">
+    {# "rucne" = vybrany soubor jen ceka v policku, neodesle se sam - zalozeni
+       nove akce je dost velky krok na to, aby chtel vlastni kliknuti. #}
+    <div class="pretahovani" data-pretahovani="rucne">
+      <span class="vyzva">Přetáhni sem ZIP se zálohou</span>
+      <small>nebo si ho vyber ze složky</small>
+      <input type="file" name="soubor" accept=".zip" required>
+    </div>
+    <div class="import-spusteni">
+      <button type="submit" class="zlute velke-tlacitko">Obnovit akci</button>
+      <small>Založí novou akci — nic existujícího nepřepíše.</small>
+    </div>
+    {# Stejny ZIP podruhe appka bez tohohle zaskrtnuti neobnovi. #}
+    <label class="obnovit-znovu">
+      <input type="checkbox" name="znovu" value="1">
+      <small>Obnovit i přesto, že už jsem tenhle soubor obnovoval(a) — vznikne další kopie akce</small>
+    </label>
+  </form>
+  <small>
+    Zálohy ve starším formátu appka bezpečně odmítne, místo aby akci obnovila jen
+    zpola. Účastníci a obdarovaní se obnoví se všemi osobními údaji, přesně jak
+    byli v záloze.
+  </small>
+</article>
+{% endblock %}

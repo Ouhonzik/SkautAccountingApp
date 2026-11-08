@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block titulek %}Obnovení hesla{% endblock %}
+{% block telo_trida %}knm-prihlaseni{% endblock %}
+
+{% block obsah %}
+<div class="knm-prihlaseni-panel">
+  <img class="znacka" src="{{ url_for('static', path='kormorani-white.png') }}?v={{ verze('kormorani-white.png') }}" alt="Přístav Kormoráni">
+  {% if not platny %}
+    <h1>Odkaz už neplatí</h1>
+    <p class="podnadpis"><a href="/zapomenute-heslo">Požádej o nový</a>.</p>
+  {% else %}
+    <h1>Nové heslo</h1>
+    <form method="post" action="/heslo/obnovit/{{ request.path_params.token }}">
+      <label>Nové heslo
+        <input type="password" name="heslo" autocomplete="new-password" required minlength="8"{{ stav_formulare.atributy('heslo') }}>
+        {{ stav_formulare.napoveda('heslo') }}
+      </label>
+      <label>Nové heslo ještě jednou
+        <input type="password" name="znovu_heslo" autocomplete="new-password" required minlength="8"{{ stav_formulare.atributy('znovu_heslo') }}>
+        {{ stav_formulare.napoveda('znovu_heslo') }}
+      </label>
+      <button type="submit" class="zlute">Uložit heslo</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

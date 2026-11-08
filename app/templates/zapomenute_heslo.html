@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block titulek %}Zapomenuté heslo{% endblock %}
+{% block telo_trida %}knm-prihlaseni{% endblock %}
+
+{% block obsah %}
+<div class="knm-prihlaseni-panel">
+  <img class="znacka" src="{{ url_for('static', path='kormorani-white.png') }}?v={{ verze('kormorani-white.png') }}" alt="Přístav Kormoráni">
+  <h1>Zapomenuté heslo</h1>
+  <p class="podnadpis">Napiš přihlašovací jméno nebo e-mail — pošleme odkaz na obnovení hesla.</p>
+
+  <form method="post" action="/zapomenute-heslo">
+    <label>Jméno nebo e-mail
+      <input type="text" name="prihlaseni" autocomplete="username" autofocus required
+             value="{{ stav_formulare.hodnota('prihlaseni') }}"{{ stav_formulare.atributy('prihlaseni') }}>
+      {{ stav_formulare.napoveda('prihlaseni') }}
+    </label>
+    <button type="submit" class="zlute">Poslat odkaz</button>
+  </form>
+  <p class="podnadpis"><a href="/prihlaseni">Zpět na přihlášení</a></p>
+</div>
+{% endblock %}

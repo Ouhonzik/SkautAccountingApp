@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block titulek %}{{ nadpis }}{% endblock %}
+
+{% block obsah %}
+<article>
+  <h1>{{ nadpis }}</h1>
+  <p>{{ text }}</p>
+  {% if cas %}<p><small>Stalo se v {{ cas }}.</small></p>{% endif %}
+  <p>
+    <a href="{{ zpet }}" role="button" class="zlute">Zpět</a>
+    <a href="/" role="button" class="outline secondary">Přehled akcí</a>
+  </p>
+</article>
+{% endblock %}

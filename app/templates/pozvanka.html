@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulek %}Pozvánka{% endblock %}
+{% block telo_trida %}knm-prihlaseni{% endblock %}
+
+{% block obsah %}
+<div class="knm-prihlaseni-panel">
+  <img class="znacka" src="{{ url_for('static', path='kormorani-white.png') }}?v={{ verze('kormorani-white.png') }}" alt="Přístav Kormoráni">
+  {% if not platna %}
+    <h1>Pozvánka už neplatí</h1>
+    <p class="podnadpis">Požádej správce o novou pozvánku.</p>
+  {% else %}
+    <h1>Ahoj{% if ucet.jmeno %}, {{ ucet.jmeno }}{% endif %}</h1>
+    <p class="podnadpis">Nastav si přihlašovací jméno a heslo.</p>
+
+    <form method="post" action="/pozvanka/{{ request.path_params.token }}">
+      <label>Jméno
+        <input type="text" name="jmeno" value="{{ stav_formulare.hodnota('jmeno', ucet.jmeno) }}" required{{ stav_formulare.atributy('jmeno') }}>
+        {{ stav_formulare.napoveda('jmeno') }}
+      </label>
+      <label>Přihlašovací jméno
+        <input type="text" name="login" value="{{ stav_formulare.hodnota('login', ucet.login) }}" autocomplete="username" required{{ stav_formulare.atributy('login') }}>
+        {{ stav_formulare.napoveda('login') }}
+      </label>
+      <label>Heslo
+        <input type="password" name="heslo" autocomplete="new-password" required minlength="8"{{ stav_formulare.atributy('heslo') }}>
+        {{ stav_formulare.napoveda('heslo') }}
+      </label>
+      <label>Heslo ještě jednou
+        <input type="password" name="znovu_heslo" autocomplete="new-password" required minlength="8"{{ stav_formulare.atributy('znovu_heslo') }}>
+        {{ stav_formulare.napoveda('znovu_heslo') }}
+      </label>
+      <button type="submit" class="zlute">Založit účet</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

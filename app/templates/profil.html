@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block titulek %}Můj profil{% endblock %}
+
+{% block obsah %}
+<h1>Můj profil</h1>
+
+<article>
+  <h2>Údaje</h2>
+  <form method="post" action="/profil/ulozit" class="radek vzdy-aktivni">
+    <label style="flex:1">Jméno
+      <input type="text" name="jmeno" value="{{ stav_formulare.hodnota('jmeno', uzivatel.jmeno) }}"
+             required{{ stav_formulare.atributy('jmeno') }}>
+      {{ stav_formulare.napoveda('jmeno') }}
+    </label>
+    <label style="flex:1">E-mail (nepovinné)
+      <input type="email" name="email" value="{{ stav_formulare.hodnota('email', uzivatel.email or '') }}"{{ stav_formulare.atributy('email') }}>
+      {{ stav_formulare.napoveda('email') }}
+    </label>
+    <label style="flex:1">Aktuální heslo (jen při změně e-mailu)
+      <input type="password" name="heslo" autocomplete="current-password"{{ stav_formulare.atributy('heslo') }}>
+      {{ stav_formulare.napoveda('heslo') }}
+    </label>
+    <button type="submit" class="zlute">Uložit</button>
+  </form>
+  {% if uzivatel.email %}
+    {% if uzivatel.email_overen %}
+      <span class="stitek ok">e-mail ověřen</span>
+    {% else %}
+      <span class="stitek pozor">e-mail neověřen</span>
+      <form method="post" action="/profil/email/overit" class="vzdy-aktivni" style="display:inline">
+        <button type="submit" class="outline drobne">Ověřit e-mail</button>
+      </form>
+    {% endif %}
+  {% endif %}
+</article>
+
+<article>
+  <h2>Změna hesla</h2>
+  <form method="post" action="/profil/heslo" class="vzdy-aktivni">
+    <label>Staré heslo
+      <input type="password" name="stare_heslo" autocomplete="current-password" required{{ stav_formulare.atributy('stare_heslo') }}>
+      {{ stav_formulare.napoveda('stare_heslo') }}
+    </label>
+    <label>Nové heslo
+      <input type="password" name="nove_heslo" autocomplete="new-password" minlength="8" required{{ stav_formulare.atributy('nove_heslo') }}>
+      {{ stav_formulare.napoveda('nove_heslo') }}
+    </label>
+    <label>Nové heslo ještě jednou
+      <input type="password" name="znovu_heslo" autocomplete="new-password" minlength="8" required{{ stav_formulare.atributy('znovu_heslo') }}>
+      {{ stav_formulare.napoveda('znovu_heslo') }}
+    </label>
+    <button type="submit" class="zlute">Změnit heslo</button>
+  </form>
+</article>
+
+{% if cteni_ai.pocet %}
+<article>
+  <h2>Tvoje čtení AI</h2>
+  <p>
+    Celkem {{ cteni_ai.pocet|mnozne('přečtená účtenka', 'přečtené účtenky', 'přečtených účtenek') }},
+    odhadem {{ cteni_ai.kc|koruny }}{% if cteni_ai.nezname %} (u části neznámý ceník){% endif %}.
+  </p>
+</article>
+{% endif %}
+{% endblock %}

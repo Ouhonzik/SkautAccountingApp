@@ -1,0 +1,569 @@
+/* ---- Tiskopisy PPD a VPD --------------------------------------------------
+   Styly jen pro stranku Doklady. Nejsou v app.css schvalne: predpisy pro papir
+   a pro tisk by jinde ve strance nemely co delat a jen by se pletly.
+
+   Doklad je vedoma vyjimka ze sklenenych nadob v app.css - papir ma vypadat
+   jako papir, aby bylo uz na obrazovce videt presne to, co vyjede z tiskarny.
+   Proto se sklu prebiji vypln, rozostreni i stin a nastavuje se pevna bila.
+
+   Rozmery jsou v milimetrech, ne v em. Tiskopis se lepi, deruje a zaklada do
+   sanonu - na papire tedy musi sedet skutecna vzdalenost, ne velikost pisma.
+
+   **Zaklad dokladu ma zabrat co nejmin** - hlavicka, nazev, vyplnena pole
+   a podpisy. Zbytek listu patri nalepenym uctenkam. Jedina vec, ktera zaklad
+   protahne, je rozpis uctenek: ten roste s poctem polozek (5,1 mm na radek,
+   3 mm na podradek prilohy) a je to tak spravne - misto pro nej si bere
+   lepici plocha, ktera zadnou spodni hranici vysky nema.
+
+   Mereno 2. 9. 2026: prazdny doklad (prijem bez rozpisu) ma zaklad 101 mm,
+   pri jedne uctence 117,9 mm, pri deseti 163,8 mm. Na lepeni tak zbyva
+   179 az 117 mm. Kdyz se sem pripisuje dalsi radek, zmer to znovu tiskem do
+   PDF - pocet stran je jediny spolehlivy test, jestli se doklad jeste vejde. */
+
+.doklady-plocha {
+  /* Papir ma pevnych 210 mm. Na uzsim okne se radeji posouva do strany,
+     nez aby se zmackl a prestal odpovidat tomu, co se vytiskne. */
+  overflow-x: auto;
+}
+
+.doklad {
+  position: relative;
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto 2rem;
+  /* Vlevo je pruh na vazbu - tam se nesazi text ani se nelepi. */
+  padding: 8mm 10mm 8mm 24mm;
+  display: flex;
+  flex-direction: column;
+
+  /* Prebiji sklo z app.css. */
+  border: none;
+  border-radius: 0;
+  background-color: #fff;
+  background-image: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 12px 34px rgba(8, 16, 32, .38);
+
+  color: #17202b;
+  font-size: 9.5pt;
+  line-height: 1.3;
+}
+
+/* ---- Pruh na vazbu: dve dirky a cara, za kterou se uz nelepi ---- */
+
+.doklad-vazba {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 26mm;
+}
+.doklad-vazba::after {
+  content: "";
+  position: absolute;
+  left: 15mm;
+  top: 8mm;
+  bottom: 8mm;
+  border-left: .3mm dashed #9aa7b8;
+}
+.doklad-dira {
+  position: absolute;
+  left: 9mm;           /* stred dirky 12 mm od kraje, jak ma evropska deracka */
+  width: 6mm;
+  height: 6mm;
+  border: .3mm dashed #9aa7b8;
+  border-radius: 50%;
+}
+.doklad-dira.prvni { top: calc(50% - 43mm); }   /* dirky jsou 80 mm od sebe */
+.doklad-dira.druha { top: calc(50% + 37mm); }
+
+/* ---- Hlavicka ---- */
+
+.doklad-hlavicka {
+  display: flex;
+  align-items: flex-start;
+  gap: 4mm;
+}
+.doklad-hlavicka img {
+  width: 13mm;
+  height: auto;
+}
+.doklad-stredisko {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: .3mm;
+  font-size: 7.5pt;
+  color: #3c4858;
+}
+.doklad-stredisko strong {
+  font-size: 9pt;
+  color: #17202b;
+}
+.doklad-cislo {
+  min-width: 28mm;
+  padding: 1.2mm 3mm;
+  border: .45mm solid #17202b;
+  text-align: center;
+}
+.doklad-cislo .popisek {
+  display: block;
+  font-size: 6pt;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #4a5766;
+}
+.doklad-cislo strong {
+  display: block;
+  font-size: 13pt;
+  line-height: 1.1;
+}
+
+.doklad .doklad-nazev {
+  margin: 3.5mm 0 3mm;
+  padding-block: 1mm;
+  border-block: .45mm solid #17202b;
+  font-size: 11pt;
+  letter-spacing: .07em;
+  text-align: center;
+  color: #17202b;
+  text-shadow: none;
+}
+
+/* ---- Vyplnena pole ---- */
+
+.doklad-pole {
+  margin-bottom: 2.6mm;
+  padding-bottom: .6mm;
+  border-bottom: .25mm solid #17202b;
+}
+.doklad-pole .popisek {
+  display: block;
+  font-size: 6pt;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #4a5766;
+}
+.doklad-pole .hodnota {
+  display: block;
+  min-height: 5mm;
+  font-size: 9.5pt;
+}
+.doklad-dvojice {
+  display: flex;
+  gap: 5mm;
+}
+/* Sirky se lisi podle toho, co do pole prijde: `Príloh: 3 ks` se vejde do
+   uzkeho, nazev slozky a castka slovy potrebuji misto. */
+.doklad-dvojice > .doklad-pole { flex: 1; }
+.doklad-dvojice > .doklad-pole.uzke { flex: .55; }
+.doklad-dvojice > .doklad-pole.siroke { flex: 2; }
+.doklad-pole.castka .hodnota {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+/* ---- Rozpis uctenek ---- */
+
+.doklad .doklad-rozpis {
+  width: 100%;
+  margin-bottom: 2mm;
+  border-collapse: collapse;
+  font-size: 7.5pt;
+}
+.doklad .doklad-rozpis :is(th, td) {
+  padding: .7mm 1.6mm;
+  border: .25mm solid #8a97a8;
+}
+.doklad .doklad-rozpis th {
+  background: #eef2f7;
+  font-size: 6pt;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  text-align: left;
+  color: #3c4858;
+}
+.doklad .doklad-rozpis .cislo { text-align: right; }
+/* Priloha visi pod svou uctenkou: vlastni radek uvnitr bunky, drobnym
+   pismem a odsazeny, aby si ji nikdo nespletl s dalsi polozkou rozpisu. */
+.doklad .doklad-rozpis .doklad-priloha {
+  display: block;
+  padding-left: 3mm;
+  font-size: 6.5pt;
+  font-style: italic;
+  color: #4a5766;
+}
+/* Rozdelena uctenka: pod jejim radkem podradky s kategoriemi. Drobnym pismem
+   a odsazene, aby bylo na prvni pohled videt, ze rozepisuji castku nad sebou
+   a nejsou to dalsi uctenky - jinak by papir vypadal, jako by se scital dvakrat. */
+.doklad .doklad-rozpis .doklad-cast :is(td, th) {
+  border-top: none;
+  font-size: 6.5pt;
+  color: #4a5766;
+}
+.doklad .doklad-rozpis .doklad-cast td:nth-child(2) { padding-left: 4mm; }
+.doklad .doklad-rozpis .doklad-cast td:nth-child(3)::before {
+  content: "└ ";
+  color: #8a97a8;
+}
+.doklad .doklad-prilohy-bokem {
+  margin: 0 0 2mm;
+  font-size: 7pt;
+  color: #3c4858;
+}
+.doklad .doklad-prilohy-bokem .popisek {
+  margin-right: 1.5mm;
+  font-size: 6pt;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #4a5766;
+}
+.doklad .doklad-rozpis tfoot :is(td, th) { font-weight: 700; }
+
+/* ---- Podpisy: linka, pod ni popisek a malym pismem jmeno ---- */
+
+.doklad-podpisy {
+  display: flex;
+  gap: 6mm;
+  margin-top: 3.5mm;
+}
+.doklad-podpis {
+  flex: 1;
+  text-align: center;
+}
+.doklad-podpis .misto {
+  display: block;
+  height: 9mm;
+  border-bottom: .3mm solid #17202b;
+}
+.doklad-podpis .popisek {
+  display: block;
+  margin-top: .8mm;
+  font-size: 6.5pt;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #4a5766;
+}
+.doklad-podpis .jmeno {
+  display: block;
+  min-height: 3.5mm;
+  font-size: 7.5pt;
+  color: #3c4858;
+}
+
+/* ---- Misto na nalepeni originalu ---- */
+
+.doklad-lepeni {
+  /* Zadna spodni hranice vysky. Lepici plocha je to jedine, co na dokladu
+     smi ustoupit - `flex: 1` ji nafoukne do vseho, co po rozpisu na liste
+     zbyde, a kdyz je uctenek hodne, smrskne se. Drive tu stalo
+     `min-height: 150mm` a doklad se pri ctvrte uctence prestal vejit na A4:
+     nic se neoriznulo, ale ke kazdemu takovemu dokladu vyjel druhy list
+     jen se spodkem tehle ramecku a s patickou. Zmereno tiskem do PDF
+     2. 9. 2026. Kdyz se sem hranice vrati, vrati se i list navic. */
+  flex: 1;
+  margin: 4mm 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: .3mm dashed #9aa7b8;
+  border-radius: 2mm;
+  /* Popisek drzi u horniho okraje - uprostred by ho prvni nalepena uctenka
+     zakryla a zbytek plochy by vypadal jako omylem prazdny ramecek. */
+  align-items: flex-start;
+  padding-top: 2mm;
+  font-size: 7.5pt;
+  color: #8a97a8;
+}
+
+.doklad-paticka {
+  margin-top: 3mm;
+  font-size: 7pt;
+  letter-spacing: .06em;
+  text-align: center;
+  color: #6b7787;
+}
+
+/* ---- Titulni list ---------------------------------------------------------
+   Prvni papir ve slozce. Je to tentyz list jako doklad - stejna sirka i pruh
+   na vazbu - proto se tu sazi jen to, cim se od nej lisi: vetsi znak, nazev
+   akce velkym pismem, souhrn castek a soupis dokladu. Nic se na nej nelepi,
+   takze cara, za kterou uz uctenka nesmi, na nem odpada. */
+
+.doklad.titulni .doklad-vazba::after { display: none; }
+
+.titulni .titulni-znak { width: 18mm; }
+
+.doklad .titulni-nadpis {
+  margin: 7mm 0 0;
+  font-size: 7pt;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: #4a5766;
+}
+.doklad .titulni-akce {
+  margin: 1mm 0 4.5mm;
+  padding-bottom: 2.5mm;
+  border-bottom: .6mm solid #17202b;
+  font-size: 22pt;
+  line-height: 1.15;
+  color: #17202b;
+  text-shadow: none;
+}
+
+/* Udaje o akci po dvou vedle sebe - stejna pole jako na dokladu, jen v mrizce. */
+.titulni-udaje {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 6mm;
+  margin-bottom: 1.5mm;
+}
+
+/* Tri castky vedle sebe mezi dvema linkami. Plna vypln by na papire jen
+   zrala toner a na obrazovce delala z papiru barevny pruh. */
+.titulni-souhrn {
+  display: flex;
+  gap: 5mm;
+  margin-bottom: 3.5mm;
+  padding: 2.5mm 0;
+  border-block: .45mm solid #17202b;
+}
+.titulni-castka { flex: 1; }
+.titulni-castka .popisek {
+  display: block;
+  margin-bottom: .5mm;
+  font-size: 6pt;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #4a5766;
+}
+.titulni-castka strong {
+  display: block;
+  font-size: 13pt;
+  line-height: 1.1;
+}
+.titulni-castka.bilance strong { font-size: 15pt; }
+
+.doklad .titulni-pocty {
+  margin: 0 0 3mm;
+  font-size: 8pt;
+  color: #3c4858;
+}
+
+/* Soupis dokladu. Pevne sirky - jinak by dlouhy ucel platby stlacil cislo
+   dokladu i castku a soupis by prestal jit precist jako sloupec cisel. */
+.doklad .titulni-soupis {
+  table-layout: fixed;
+  font-size: 8pt;
+}
+.doklad .titulni-soupis :is(th, td) { padding: 1.1mm 1.6mm; }
+.doklad .titulni-soupis :is(th, td):nth-child(1) { width: 27mm; }
+.doklad .titulni-soupis :is(th, td):nth-child(2) { width: 21mm; }
+.doklad .titulni-soupis :is(th, td):nth-child(4) { width: 30mm; }
+.doklad .titulni-soupis :is(th, td):nth-child(5) { width: 24mm; }
+.doklad .titulni-soupis .oznaceni { white-space: nowrap; }
+.doklad .titulni-soupis tfoot td { border-top-width: .45mm; }
+
+/* Paticka drzi u spodniho kraje listu, at je dokladu pet nebo dvacet. */
+.titulni-vypln { flex: 1; }
+
+/* ---- Cestovni prikaz -----------------------------------------------------
+   Stavi na `.doklad` vyse - stejna sirka, stejny pruh na vazbu, stejne linky
+   a podpisy. Lisi se tim, ze to NENI tiskopis s lepici plochou, ale formular,
+   ktery ma tri bloky pod sebou (prikaz, vyuctovani, rozpis jizd) a osm
+   podpisovych linek. Vzor je papir z h.skauting.cz.
+
+   Proto drobnejsi pismo a mensi mezery nez u PPD/VPD: tam zaklad ustupuje
+   nalepenym uctenkam, tady se musi vejit cely formular.
+
+   Mereno 12. 9. 2026: pri jedenacti jizdach ma formular 281,4 mm, jeden radek
+   rozpisu 4 mm - na jednu A4 se tedy vejde 14 jizd. Pri vetsim poctu pretece
+   na druhou stranu (cestak ma v @media print `height: auto`, viz niz); je to
+   lepsi nez uriznuty radek, protoze pak by na papire nesedel soucet.
+   Obrazovka cestaku na to upozorni. Kdyz se sem pripisuje dalsi kolonka nebo
+   se meni vyska radku, zmer to znovu tiskem do PDF a cislo tady oprav. */
+
+.doklad.cestak {
+  /* Mensi okraje nahore a dole nez u PPD/VPD - tam zbytek listu patri
+     nalepenym uctenkam, tady se musi vejit cely formular. Pruh na vazbu
+     vlevo zustava stejny, papir se deruje identicky. */
+  padding: 6mm 10mm 5mm 24mm;
+  font-size: 8pt;
+  line-height: 1.25;
+}
+.doklad.cestak .doklad-hlavicka img { width: 11mm; }
+.doklad.cestak .doklad-pole {
+  margin-bottom: 1.2mm;
+  padding-bottom: .3mm;
+}
+.doklad.cestak .doklad-pole .hodnota {
+  min-height: 3.6mm;
+  font-size: 8.5pt;
+}
+.doklad.cestak .doklad-nazev { margin: 2mm 0 1.8mm; }
+.doklad.cestak .doklad-podpisy { margin-top: 2mm; gap: 4mm; }
+.doklad.cestak .doklad-podpis .misto { height: 6.5mm; }
+.doklad.cestak .doklad-podpis .popisek { font-size: 5.5pt; }
+.doklad.cestak .doklad-podpis .jmeno { min-height: 2.6mm; font-size: 7pt; }
+.doklad.cestak .doklad-paticka { margin-top: 1.5mm; }
+
+/* Podnadpis oddeluje tri bloky formulare. Linka nahore rika "tady zacina
+   neco jineho" - na papire z h.skautingu je to stejne. */
+.doklad.cestak .cestak-podnadpis {
+  margin: 2mm 0 1.4mm;
+  padding-top: 1mm;
+  border-top: .45mm solid #17202b;
+  font-size: 9.5pt;
+  letter-spacing: .06em;
+  text-align: center;
+  color: #17202b;
+  text-shadow: none;
+}
+
+.doklad.cestak .doklad-stredisko { font-size: 6.5pt; }
+.doklad.cestak .doklad-stredisko strong { font-size: 8pt; }
+.doklad.cestak .doklad-rozpis { margin-bottom: 1.4mm; font-size: 7pt; }
+/* Radek rozpisu ma 4 mm. Kolik jizd se vejde na A4, rika komentar u
+   `.doklad.cestak` - pri zmene tehle vysky ho prepocitej. */
+.doklad.cestak .doklad-rozpis :is(th, td) { padding: .35mm 1.2mm; }
+.doklad.cestak .cestak-datum {
+  display: block;
+  font-size: 6.5pt;
+  color: #3c4858;
+}
+/* Prazdne radky uctovaciho predpisu musi mit vysku, jinak by tabulka slehla
+   do nuly a nebylo by do ceho psat. */
+.doklad.cestak .cestak-predpis td { height: 3.8mm; }
+
+/* Vstupy vypoctu na jedne care nad rozpisem - presne jako na vzoru. */
+.doklad.cestak .cestak-sazby {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1mm 5mm;
+  margin: 0 0 1.8mm;
+  padding: 1.2mm 2mm;
+  border: .25mm solid #8a97a8;
+  background: #f4f7fb;
+  font-size: 7pt;
+}
+.doklad.cestak .cestak-sazba-celkem { margin-left: auto; font-size: 8pt; }
+
+.doklad.cestak .cestak-zaver {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6mm;
+  margin-top: .8mm;
+}
+.doklad.cestak .cestak-prilohy { margin: 0; font-size: 7.5pt; }
+.doklad.cestak .cestak-priloha-nazev {
+  display: block;
+  font-size: 6.5pt;
+  font-style: italic;
+  color: #4a5766;
+}
+.doklad.cestak .cestak-soucty {
+  width: 62mm;
+  border-collapse: collapse;
+  font-size: 7.5pt;
+}
+.doklad.cestak .cestak-soucty :is(th, td) {
+  padding: .5mm 1.6mm;
+  border: .25mm solid #8a97a8;
+  text-align: left;
+  font-weight: 400;
+}
+.doklad.cestak .cestak-soucty .cislo { text-align: right; min-width: 20mm; }
+.doklad.cestak .cestak-soucty tr:first-child :is(th, td) { font-weight: 700; }
+
+/* Prohlaseni sedi dole a linka na podpis se roztahne do zbytku radku. */
+.doklad.cestak .cestak-prohlaseni {
+  display: flex;
+  align-items: baseline;
+  gap: 2mm;
+  margin: 2mm 0 0;
+  font-size: 7.5pt;
+}
+.doklad.cestak .cestak-linka {
+  flex: 1;
+  border-bottom: .3mm solid #17202b;
+  min-width: 40mm;
+}
+.doklad.cestak .cestak-prohlaseni .popisek {
+  font-size: 5.5pt;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #4a5766;
+}
+
+/* ---- Tisk ----------------------------------------------------------------
+   Z obrazovky zbyde jen papir: hlavicka aplikace, drobecky, hlasky i tlacitka
+   jdou pryc a kazdy doklad dostane vlastni A4. `print-color-adjust: exact`
+   je nutny - bez nej prohlizec setri barvou a prerusovana cara ani ramecky
+   se nevytisknou. */
+
+/* ---- Telefon (Z6): doklad zmenseny na sirku obrazovky ----
+   Papir ma pevnych 210 mm (794 px), na telefonu by se posouval do strany.
+   `zoom` (na rozdil od `transform`) zmensi i zabrane misto, takze pod dokladem
+   neni prazdno. Kroky odpovidaji sirce okna bez okraju stranky (po 24 px, Z8, tedy
+   48 px; do 360 px po 20 px): zoom <= (sirka - 48) / 794. Prsty jde stranka dal priblizit - zadny
+   `user-scalable=no` ani `touch-action`, hlida to test. Jen `screen`: tisk
+   a PDF zustavaji beze zmeny. */
+@media screen and (max-width: 37.5rem) {
+  .doklad { zoom: .6; }
+}
+@media screen and (max-width: 520px) { .doklad { zoom: .51; } }
+@media screen and (max-width: 460px) { .doklad { zoom: .44; } }
+@media screen and (max-width: 400px) { .doklad { zoom: .41; } }
+@media screen and (max-width: 374px) { .doklad { zoom: .37; } }
+@media screen and (max-width: 340px) { .doklad { zoom: .35; } }
+
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+  }
+  body > header,
+  main.container > .drobecky,
+  main.container > hgroup,
+  .oznameni,
+  .netisknout { display: none !important; }
+
+  main.container {
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .doklady-plocha { overflow: visible !important; }
+
+  .doklad {
+    width: 210mm;
+    height: 297mm;
+    min-height: 0;
+    margin: 0;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+  .doklad:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Cestak se na rozdil od PPD/VPD nesmi uriznout. Pri mnoha jizdach radeji
+     pretece na druhou A4 - mlcky chybejici radek by znamenal, ze na papire
+     nesedi soucet. */
+  .doklad.cestak {
+    height: auto;
+    min-height: 297mm;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

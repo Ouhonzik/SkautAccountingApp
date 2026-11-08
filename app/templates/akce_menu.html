@@ -1,0 +1,47 @@
+{# Spolecne zahlavi vsech stranek jedne akce: drobecky + souhrn.
+   Zalozky nahore uz nejsou - mezi sekcemi se chodi pres dlazdice na Prehledu,
+   zpatky pres nazev akce v drobeccich. #}
+{% set nazvy_sekci = {
+     'skeny': 'Účtenky',
+     'slozky': 'Složky',
+     'prijmy': 'Příjmy',
+     'pokladni_kniha': 'Pokladní kniha',
+     'doklady': 'Doklady',
+     'ucastnici': 'Účastníci',
+     'obdarovani': 'Obdarovaní',
+     'cestaky': 'Cesťáky',
+   } %}
+
+<nav class="drobecky" aria-label="Kde jsem">
+  <a href="/">Akce</a>
+  {% if aktivni == 'prehled' %}
+    <span aria-current="page">{{ akce.nazev }}</span>
+  {% else %}
+    <a href="/akce/{{ akce.id }}">{{ akce.nazev }}</a>
+    {# `podsekce` vyplnuje stranka, ktera ukazuje jednu vec ze sekce - treba
+       jeden cestak. Bez nej se posledni drobecek jmenuje po cele sekci. #}
+    {% if podsekce is defined %}
+      <a href="/akce/{{ akce.id }}/{{ aktivni }}">{{ nazvy_sekci[aktivni] }}</a>
+      <span aria-current="page">{{ podsekce }}</span>
+    {% else %}
+      <span aria-current="page">{{ nazvy_sekci[aktivni] }}</span>
+    {% endif %}
+  {% endif %}
+</nav>
+
+<hgroup>
+  <h1>{% if podsekce is defined %}{{ podsekce }}{% else %}{{ akce.nazev if aktivni == 'prehled' else nazvy_sekci[aktivni] }}{% endif %}</h1>
+  <p>
+    {% if akce.datum_vyuctovani %}Vyúčtování k {{ akce.datum_vyuctovani|datum }} · {% endif %}
+    Výdaje {{ akce.soucet_vydaju|koruny }} · Příjmy {{ akce.soucet_prijmu|koruny }} ·
+    <strong class="{{ 'kladne' if akce.bilance >= 0 else 'zaporne' }}">Balance {{ akce.bilance|koruny }}</strong>
+    {% if akce.stav == 'uzavrena' %} · <mark>uzavřená</mark>{% endif %}
+  </p>
+</hgroup>
+
+{% if akce.stav == 'uzavrena' %}
+<p class="pruh-uzavrena" role="status">
+  Akce je uzavřená — jen se čte a tiskne. Chceš-li něco změnit, nejdřív ji znovu otevři
+  <a href="/akce/{{ akce.id }}#stav-akce">na přehledu akce</a>.
+</p>
+{% endif %}
